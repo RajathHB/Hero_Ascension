@@ -1,4 +1,4 @@
-#!/Users/rajathhb/Desktop/hero-ascension-backend/venv/bin/python3.12
+#!/Users/rajathhb/Desktop/Hero_Habbit/hero-ascension-backend/venv/bin/python3.11
 import sys
 from pygments.cmdline import main
 if __name__ == '__main__':

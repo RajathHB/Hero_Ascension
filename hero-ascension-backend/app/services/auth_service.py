@@ -14,18 +14,25 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer_scheme = HTTPBearer()
 
-SECRET = os.getenv("JWT_SECRET", "change-me")
+SECRET = os.getenv("JWT_SECRET")
+if not SECRET:
+    raise ValueError("JWT_SECRET not set")
+
 ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 EXPIRE_MIN = int(os.getenv("JWT_EXPIRE_MINUTES", "10080"))  # 7 days
 
 
+def _safe_password(plain: str) -> str:
+    """Ensure password is within bcrypt 72-byte limit"""
+    return plain.encode("utf-8")[:72].decode("utf-8", "ignore")
+
+
 def hash_password(plain: str) -> str:
-    # bcrypt has a 72-byte hard limit — truncate to be safe
-    return pwd_ctx.hash(plain[:72])
+    return pwd_ctx.hash(_safe_password(plain))
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_ctx.verify(plain[:72], hashed)
+    return pwd_ctx.verify(_safe_password(plain), hashed)
 
 
 def create_token(user_id: str) -> str:
