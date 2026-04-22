@@ -22,12 +22,18 @@ export default function Login() {
 
     setLoading(true)
     try {
+      let data
       if (mode === 'signup') {
-        await apiSignup(form.name, form.email, form.password)
+        data = await apiSignup(form.name, form.email, form.password)
       } else {
-        await apiLogin(form.email, form.password)
+        data = await apiLogin(form.email, form.password)
       }
-      login(form.email, form.name || form.email.split('@')[0])
+      // Pass user_id from backend so localStorage is scoped per-user
+      login({
+        userId: data.user_id,
+        email: data.email || form.email,
+        name: data.name || form.name || form.email.split('@')[0],
+      })
     } catch (err) {
       setError(err.message)
     } finally {
@@ -36,51 +42,41 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-hero-gradient bg-grid-pattern bg-grid flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Scan line */}
-      <div className="scan-line opacity-30" />
-
-      {/* Ambient glows */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-3xl opacity-5 pointer-events-none"
-        style={{ background: '#00f5ff' }} />
-      <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full blur-3xl opacity-5 pointer-events-none"
-        style={{ background: '#c084fc' }} />
+    <div className="min-h-screen bg-hero-gradient flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Decorative circles */}
+      <div className="absolute top-20 left-10 w-72 h-72 rounded-full blur-3xl opacity-30 pointer-events-none"
+        style={{ background: 'rgba(42,157,143,0.08)' }} />
+      <div className="absolute bottom-20 right-10 w-64 h-64 rounded-full blur-3xl opacity-30 pointer-events-none"
+        style={{ background: 'rgba(233,196,106,0.08)' }} />
 
       <div className="w-full max-w-md page-enter">
         {/* Logo */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-5 relative"
-            style={{ background: 'rgba(0,245,255,0.08)', border: '1px solid rgba(0,245,255,0.2)' }}>
+            style={{ background: 'rgba(42,157,143,0.08)', border: '1px solid rgba(42,157,143,0.15)' }}>
             <Shield size={40} className="text-plasma-400" />
-            <div className="absolute inset-0 rounded-2xl animate-pulse-slow"
-              style={{ boxShadow: '0 0 30px rgba(0,245,255,0.2)' }} />
           </div>
-          <h1 className="font-display text-5xl text-plasma-400 tracking-widest animate-glow">
+          <h1 className="font-display text-5xl text-plasma-400 tracking-widest">
             HERO ASCENSION
           </h1>
-          <p className="font-mono text-xs text-slate-500 mt-2 tracking-widest uppercase">
+          <p className="font-mono text-xs mt-2 tracking-widest uppercase" style={{ color: '#9E9A8C' }}>
             Your real life. Your hero journey.
           </p>
         </div>
 
         {/* Card */}
         <div className="glass-card p-8 relative">
-          <div className="corner-decoration corner-tl" />
-          <div className="corner-decoration corner-tr" />
-          <div className="corner-decoration corner-bl" />
-          <div className="corner-decoration corner-br" />
-
           {/* Mode toggle */}
-          <div className="flex rounded-lg overflow-hidden border border-plasma-400/15 mb-8 p-1 gap-1"
-            style={{ background: 'rgba(5,12,20,0.6)' }}>
+          <div className="flex rounded-xl overflow-hidden mb-8 p-1 gap-1"
+            style={{ background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.06)' }}>
             {['login', 'signup'].map(m => (
               <button
                 key={m}
                 onClick={() => { setMode(m); setError('') }}
-                className="flex-1 py-2 rounded font-body font-semibold text-sm uppercase tracking-wider transition-all duration-200"
+                className="flex-1 py-2.5 rounded-lg font-body font-semibold text-sm uppercase tracking-wider transition-all duration-200"
                 style={mode === m
-                  ? { background: 'rgba(0,245,255,0.15)', color: '#00f5ff', borderColor: 'rgba(0,245,255,0.3)' }
-                  : { color: 'rgba(148,163,184,0.5)' }
+                  ? { background: '#fff', color: '#2A9D8F', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }
+                  : { color: '#9E9A8C' }
                 }
               >
                 {m === 'login' ? '⚡ Access' : '🛡 Enlist'}
@@ -129,7 +125,8 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => setShowPass(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                  style={{ color: '#9E9A8C' }}
                 >
                   {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -137,8 +134,8 @@ export default function Login() {
             </div>
 
             {error && (
-              <div className="px-4 py-3 rounded-lg font-body text-sm text-ember-400"
-                style={{ background: 'rgba(255,69,0,0.08)', border: '1px solid rgba(255,69,0,0.2)' }}>
+              <div className="px-4 py-3 rounded-xl font-body text-sm"
+                style={{ background: 'rgba(231,111,81,0.08)', border: '1px solid rgba(231,111,81,0.2)', color: '#E76F51' }}>
                 ⚠ {error}
               </div>
             )}
@@ -150,7 +147,7 @@ export default function Login() {
             >
               {loading ? (
                 <span className="flex items-center gap-2">
-                  <span className="w-4 h-4 border-2 border-void-900/40 border-t-void-900 rounded-full animate-spin" />
+                  <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                   Authenticating...
                 </span>
               ) : (
@@ -162,19 +159,19 @@ export default function Login() {
             </button>
           </form>
 
-          <p className="text-center font-mono text-xs text-slate-600 mt-6">
+          <p className="text-center font-mono text-xs mt-6" style={{ color: '#9E9A8C' }}>
             {mode === 'login' ? 'No account? ' : 'Already enlisted? '}
             <button
               onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError('') }}
-              className="text-plasma-400 hover:underline"
+              className="text-plasma-400 hover:underline font-semibold"
             >
               {mode === 'login' ? 'Enlist now' : 'Access your account'}
             </button>
           </p>
         </div>
 
-        <p className="text-center font-mono text-xs text-slate-700 mt-6">
-          ◈ DATA STORED LOCALLY · NO SERVER REQUIRED ◈
+        <p className="text-center font-mono text-xs mt-6" style={{ color: '#C4BFAE' }}>
+          ◈ SECURE LOGIN · TRACK YOUR JOURNEY ◈
         </p>
       </div>
     </div>

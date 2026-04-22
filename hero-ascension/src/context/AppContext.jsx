@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 
 const AppContext = createContext(null)
 
@@ -10,11 +10,11 @@ export const HERO_ROSTER = [
     domain: 'Discipline',
     tagline: 'Bend before none. Break nothing.',
     color: 'plasma',
-    colorHex: '#00f5ff',
+    colorHex: '#2A9D8F',
     glowClass: 'hero-plasma',
     icon: '⚡',
     tiers: ['Cadet', 'Sentinel', 'Vanguard', 'Iron Lord'],
-    bg: 'from-cyan-900/30 to-void-900',
+    bg: 'from-teal-100/40 to-cream-50',
   },
   {
     id: 'ember-fist',
@@ -22,11 +22,11 @@ export const HERO_ROSTER = [
     domain: 'Strength',
     tagline: 'Forge your body. Forge your will.',
     color: 'ember',
-    colorHex: '#ff6b35',
+    colorHex: '#E76F51',
     glowClass: 'hero-ember',
     icon: '🔥',
     tiers: ['Brawler', 'Warrior', 'Protector', 'King'],
-    bg: 'from-orange-900/30 to-void-900',
+    bg: 'from-orange-100/40 to-cream-50',
   },
   {
     id: 'arcane-mind',
@@ -34,11 +34,11 @@ export const HERO_ROSTER = [
     domain: 'Learning',
     tagline: 'Knowledge is the only true power.',
     color: 'arcane',
-    colorHex: '#c084fc',
+    colorHex: '#9B72CF',
     glowClass: 'hero-arcane',
     icon: '🔮',
     tiers: ['Apprentice', 'Scholar', 'Sage', 'Archmage'],
-    bg: 'from-purple-900/30 to-void-900',
+    bg: 'from-purple-100/40 to-cream-50',
   },
   {
     id: 'golden-path',
@@ -46,11 +46,11 @@ export const HERO_ROSTER = [
     domain: 'Wealth',
     tagline: 'Every coin is a vote for your future.',
     color: 'gold',
-    colorHex: '#fbbf24',
+    colorHex: '#E9C46A',
     glowClass: 'hero-gold',
     icon: '💰',
     tiers: ['Saver', 'Builder', 'Investor', 'Sovereign'],
-    bg: 'from-yellow-900/30 to-void-900',
+    bg: 'from-yellow-100/40 to-cream-50',
   },
   {
     id: 'jade-spirit',
@@ -58,11 +58,11 @@ export const HERO_ROSTER = [
     domain: 'Mindfulness',
     tagline: 'Still water reflects the whole sky.',
     color: 'jade',
-    colorHex: '#34d399',
+    colorHex: '#52B788',
     glowClass: 'hero-jade',
     icon: '🌿',
     tiers: ['Seeker', 'Monk', 'Sage', 'Enlightened'],
-    bg: 'from-emerald-900/30 to-void-900',
+    bg: 'from-emerald-100/40 to-cream-50',
   },
   {
     id: 'nova-heart',
@@ -70,11 +70,11 @@ export const HERO_ROSTER = [
     domain: 'Relationships',
     tagline: 'Connection is the source of all strength.',
     color: 'rose',
-    colorHex: '#fb7185',
+    colorHex: '#E07A8E',
     glowClass: 'hero-rose',
     icon: '💫',
     tiers: ['Companion', 'Ally', 'Guardian', 'Beacon'],
-    bg: 'from-rose-900/30 to-void-900',
+    bg: 'from-rose-100/40 to-cream-50',
   },
 ]
 
@@ -108,14 +108,29 @@ function todayStr() {
 }
 
 // Check if a date is applicable for a given habit frequency
-// daily = every day, weekdays = Mon-Fri, weekly = once per week
-function isDayApplicable(date, frequency) {
+// daily = every day, weekdays = Mon-Fri, weekend = Sat+Sun, custom = within date range
+function isDayApplicable(date, frequency, habit) {
+  const day = date.getDay() // 0=Sun, 6=Sat
   if (frequency === 'weekdays') {
-    const day = date.getDay() // 0=Sun, 6=Sat
     return day !== 0 && day !== 6
   }
-  // daily and weekly both show all days (weekly is tracked differently)
-  return true
+  if (frequency === 'weekend') {
+    return day === 0 || day === 6
+  }
+  if (frequency === 'custom' && habit) {
+    if (!habit.customFrom || !habit.customTo) return false
+    const dateStr = toLocalDateStr(date)
+    return dateStr >= habit.customFrom && dateStr <= habit.customTo
+  }
+  return true // daily
+}
+
+// ─── User-scoped localStorage helpers ───────────────────────────────
+// Each user's data is stored under keys prefixed with their user_id,
+// so different users never see each other's data.
+
+function getUserKey(userId, key) {
+  return `ha_${userId}_${key}`
 }
 
 function load(key, fallback) {
@@ -129,37 +144,127 @@ function save(key, val) {
   localStorage.setItem(key, JSON.stringify(val))
 }
 
+// Load user-scoped data
+function loadUserData(userId) {
+  if (!userId) {
+    return {
+      selectedHeroIds: [],
+      habits: [],
+      goals: [],
+      logs: {},
+      heroXP: {},
+      onboarded: false,
+    }
+  }
+  return {
+    selectedHeroIds: load(getUserKey(userId, 'selected_heroes'), []),
+    habits: load(getUserKey(userId, 'habits'), []),
+    goals: load(getUserKey(userId, 'goals'), []),
+    logs: load(getUserKey(userId, 'logs'), {}),
+    heroXP: load(getUserKey(userId, 'hero_xp'), {}),
+    onboarded: load(getUserKey(userId, 'onboarded'), false),
+  }
+}
+
 // ─── Provider ────────────────────────────────────────────────────────
 export function AppProvider({ children }) {
+  // Load the current user from localStorage (includes user_id)
   const [user, setUser] = useState(() => load('ha_user', null))
-  const [selectedHeroIds, setSelectedHeroIds] = useState(() => load('ha_selected_heroes', []))
-  const [habits, setHabits] = useState(() => load('ha_habits', []))
-  const [goals, setGoals] = useState(() => load('ha_goals', []))
-  const [logs, setLogs] = useState(() => load('ha_logs', {}))
-  // heroXP: { heroId: totalXP }
-  const [heroXP, setHeroXP] = useState(() => load('ha_hero_xp', {}))
-  const [onboarded, setOnboarded] = useState(() => load('ha_onboarded', false))
 
-  // Persist everything
+  // Use the stored user_id to load the correct user's data
+  const currentUserId = user?.userId || null
+
+  const [selectedHeroIds, setSelectedHeroIds] = useState(() => {
+    const data = loadUserData(currentUserId)
+    return data.selectedHeroIds
+  })
+  const [habits, setHabits] = useState(() => {
+    const data = loadUserData(currentUserId)
+    return data.habits
+  })
+  const [goals, setGoals] = useState(() => {
+    const data = loadUserData(currentUserId)
+    return data.goals
+  })
+  const [logs, setLogs] = useState(() => {
+    const data = loadUserData(currentUserId)
+    return data.logs
+  })
+  // heroXP: { heroId: totalXP }
+  const [heroXP, setHeroXP] = useState(() => {
+    const data = loadUserData(currentUserId)
+    return data.heroXP
+  })
+  const [onboarded, setOnboarded] = useState(() => {
+    const data = loadUserData(currentUserId)
+    return data.onboarded
+  })
+
+  // Track the current user ID so we can detect user switches
+  const prevUserIdRef = useRef(currentUserId)
+
+  // Persist user object (not user-scoped, shared key)
   useEffect(() => { save('ha_user', user) }, [user])
-  useEffect(() => { save('ha_selected_heroes', selectedHeroIds) }, [selectedHeroIds])
-  useEffect(() => { save('ha_habits', habits) }, [habits])
-  useEffect(() => { save('ha_goals', goals) }, [goals])
-  useEffect(() => { save('ha_logs', logs) }, [logs])
-  useEffect(() => { save('ha_hero_xp', heroXP) }, [heroXP])
-  useEffect(() => { save('ha_onboarded', onboarded) }, [onboarded])
+
+  // Persist user-scoped data — only when we have a valid user
+  useEffect(() => {
+    if (currentUserId) save(getUserKey(currentUserId, 'selected_heroes'), selectedHeroIds)
+  }, [currentUserId, selectedHeroIds])
+  useEffect(() => {
+    if (currentUserId) save(getUserKey(currentUserId, 'habits'), habits)
+  }, [currentUserId, habits])
+  useEffect(() => {
+    if (currentUserId) save(getUserKey(currentUserId, 'goals'), goals)
+  }, [currentUserId, goals])
+  useEffect(() => {
+    if (currentUserId) save(getUserKey(currentUserId, 'logs'), logs)
+  }, [currentUserId, logs])
+  useEffect(() => {
+    if (currentUserId) save(getUserKey(currentUserId, 'hero_xp'), heroXP)
+  }, [currentUserId, heroXP])
+  useEffect(() => {
+    if (currentUserId) save(getUserKey(currentUserId, 'onboarded'), onboarded)
+  }, [currentUserId, onboarded])
 
   const selectedHeroes = HERO_ROSTER.filter(h => selectedHeroIds.includes(h.id))
 
   // ── Auth ──
-  const login = useCallback((email, name) => {
-    setUser({ email, name, joinedAt: new Date().toISOString() })
+  const login = useCallback((userData) => {
+    // userData = { userId, email, name }
+    const newUserId = userData.userId
+
+    // Set user (triggers re-render)
+    setUser({
+      userId: newUserId,
+      email: userData.email,
+      name: userData.name,
+      joinedAt: new Date().toISOString(),
+    })
+
+    // Load this user's data from localStorage (may be empty for new users)
+    const data = loadUserData(newUserId)
+    setSelectedHeroIds(data.selectedHeroIds)
+    setHabits(data.habits)
+    setGoals(data.goals)
+    setLogs(data.logs)
+    setHeroXP(data.heroXP)
+    setOnboarded(data.onboarded)
   }, [])
 
   const logout = useCallback(() => {
+    // Clear user session
     setUser(null)
-    // Data (heroes, habits, logs, XP, goals) is preserved in localStorage
-    // and will be restored when the user logs back in
+    // Clear the auth token
+    localStorage.removeItem('ha_token')
+    // Reset all in-memory state to empty
+    setSelectedHeroIds([])
+    setHabits([])
+    setGoals([])
+    setLogs({})
+    setHeroXP({})
+    setOnboarded(false)
+    // NOTE: User-scoped data remains in localStorage so it's
+    // available when the same user logs back in.
   }, [])
 
   // ── Hero selection ──
@@ -211,6 +316,11 @@ export function AppProvider({ children }) {
       frequency: habit.frequency || 'daily',
       xpValue: habit.xpValue || 10,
       createdAt: new Date().toISOString(),
+      // For custom frequency: store the from/to date range
+      ...(habit.frequency === 'custom' ? {
+        customFrom: habit.customFrom || '',
+        customTo: habit.customTo || '',
+      } : {}),
     }
     setHabits(prev => [...prev, newHabit])
     return newHabit
@@ -276,17 +386,22 @@ export function AppProvider({ children }) {
 
   // ── Streak calculation ──
   const getHabitStreak = useCallback((habitId) => {
+    const habit = habits.find(h => h.id === habitId)
+    const freq = habit?.frequency || 'daily'
     let streak = 0
     const today = new Date()
-    for (let i = 0; i < 90; i++) {
+
+    // Count consecutive applicable days going back from today
+    for (let i = 0; i < 365; i++) {
       const d = new Date(today)
       d.setDate(d.getDate() - i)
+      if (!isDayApplicable(d, freq, habit)) continue
       const key = `${habitId}_${toLocalDateStr(d)}`
       if (logs[key]) streak++
       else if (i > 0) break
     }
     return streak
-  }, [logs])
+  }, [logs, habits])
 
   // ── Calendar data for last N days (lookback from today) ──
   const getCalendarData = useCallback((habitId, days = 30) => {
@@ -328,7 +443,7 @@ export function AppProvider({ children }) {
     const freq = habit?.frequency || 'daily'
     const d = new Date(startDate)
     while (d <= endOfMonth) {
-      if (isDayApplicable(d, freq)) {
+      if (isDayApplicable(d, freq, habit)) {
         const dateStr = toLocalDateStr(d)
         const isFuture = d > today
         result.push({
@@ -362,12 +477,12 @@ export function AppProvider({ children }) {
         if (createdDay > monthStart) startDay = createdDay
       }
 
-      // Total = days from start to end of month (respecting frequency)
-      // Done = only count up to today (can't complete future days)
+      // Total = applicable slots from start to end of month
+      // Done = only count up to today (can't complete future slots)
       const freq = h.frequency || 'daily'
       const d = new Date(startDay)
       while (d <= endOfMonth) {
-        if (isDayApplicable(d, freq)) {
+        if (isDayApplicable(d, freq, h)) {
           total++
           if (d <= today) {
             const dateStr = toLocalDateStr(d)

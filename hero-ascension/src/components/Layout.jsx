@@ -8,22 +8,24 @@ export default function Layout() {
   const { user, logout } = useApp()
 
   return (
-    <div className="min-h-screen bg-hero-gradient bg-grid-pattern bg-grid flex flex-col">
+    <div className="min-h-screen bg-hero-gradient flex flex-col">
       {/* Top bar */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-plasma-400/10">
+      <header className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-plasma-400/10 border border-plasma-400/30 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+            style={{ background: 'rgba(42,157,143,0.1)', border: '1px solid rgba(42,157,143,0.15)' }}>
             <span className="text-plasma-400 font-display text-sm">HA</span>
           </div>
           <span className="font-display text-xl text-plasma-400 tracking-widest">HERO ASCENSION</span>
         </div>
         <div className="flex items-center gap-4">
-          <span className="font-mono text-xs text-slate-500 uppercase tracking-wider hidden sm:block">
+          <span className="font-mono text-xs uppercase tracking-wider hidden sm:block" style={{ color: '#9E9A8C' }}>
             {user?.name}
           </span>
           <button
             onClick={logout}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-slate-500 hover:text-ember-400 hover:bg-ember-400/10 transition-all text-sm font-body font-semibold"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-body font-semibold transition-all"
+            style={{ color: '#E76F51', background: 'rgba(231,111,81,0.06)' }}
           >
             <LogOut size={14} />
             <span className="hidden sm:block">Exit</span>
@@ -38,7 +40,8 @@ export default function Layout() {
 
       {/* Bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 pt-2">
-        <div className="glass-card max-w-sm mx-auto flex items-center justify-around px-2 py-1">
+        <div className="glass-card max-w-sm mx-auto flex items-center justify-around px-2 py-1"
+          style={{ boxShadow: '0 -4px 20px rgba(0,0,0,0.06)' }}>
           <NavLink
             to="/dashboard"
             className={({ isActive }) => clsx('nav-item', isActive && 'active')}

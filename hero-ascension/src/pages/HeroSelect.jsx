@@ -2,10 +2,10 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp, HERO_ROSTER } from '../context/AppContext'
 import HeroCard from '../components/HeroCard'
-import { ArrowRight, Shield } from 'lucide-react'
+import { ArrowRight, Shield, LogOut } from 'lucide-react'
 
 export default function HeroSelect() {
-  const { selectedHeroIds, toggleHeroSelection, confirmHeroSelection } = useApp()
+  const { selectedHeroIds, toggleHeroSelection, confirmHeroSelection, logout } = useApp()
   const navigate = useNavigate()
 
   const handleContinue = () => {
@@ -15,22 +15,32 @@ export default function HeroSelect() {
   }
 
   return (
-    <div className="min-h-screen bg-hero-gradient bg-grid-pattern bg-grid relative overflow-hidden">
-      <div className="scan-line opacity-20" />
+    <div className="min-h-screen bg-hero-gradient relative overflow-hidden">
+      {/* Logout button - top right */}
+      <div className="absolute top-4 right-4 z-10">
+        <button
+          onClick={logout}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl font-body font-semibold text-sm transition-all"
+          style={{ background: 'rgba(231,111,81,0.08)', color: '#E76F51', border: '1px solid rgba(231,111,81,0.15)' }}
+        >
+          <LogOut size={14} />
+          Exit
+        </button>
+      </div>
 
       {/* Header */}
       <div className="text-center pt-12 pb-8 px-6 page-enter">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-5 font-mono text-xs text-plasma-400 uppercase tracking-widest"
-          style={{ background: 'rgba(0,245,255,0.08)', border: '1px solid rgba(0,245,255,0.2)' }}>
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-5 font-mono text-xs uppercase tracking-widest"
+          style={{ background: 'rgba(42,157,143,0.08)', border: '1px solid rgba(42,157,143,0.15)', color: '#2A9D8F' }}>
           <Shield size={12} />
           Step 1 of 2
         </div>
         <h1 className="font-display text-5xl sm:text-6xl text-plasma-400 tracking-wider mb-3">
           CHOOSE YOUR HEROES
         </h1>
-        <p className="font-body text-slate-400 text-lg max-w-xl mx-auto">
+        <p className="font-body text-lg max-w-xl mx-auto" style={{ color: '#7A7668' }}>
           Select the life domains you want to master. Each hero represents a part of your journey.
-          <span className="text-plasma-400"> You can pick multiple.</span>
+          <span className="text-plasma-400 font-semibold"> You can pick multiple.</span>
         </p>
       </div>
 
@@ -51,7 +61,7 @@ export default function HeroSelect() {
         <div className="mt-10 text-center page-enter page-enter-delay-2">
           {selectedHeroIds.length > 0 ? (
             <div className="space-y-3">
-              <p className="font-mono text-sm text-slate-400">
+              <p className="font-mono text-sm" style={{ color: '#7A7668' }}>
                 <span className="text-plasma-400 font-bold">{selectedHeroIds.length}</span>{' '}
                 {selectedHeroIds.length === 1 ? 'hero' : 'heroes'} selected
               </p>
@@ -61,7 +71,7 @@ export default function HeroSelect() {
               </button>
             </div>
           ) : (
-            <p className="font-mono text-sm text-slate-600 uppercase tracking-wider">
+            <p className="font-mono text-sm uppercase tracking-wider" style={{ color: '#C4BFAE' }}>
               Select at least one hero to continue
             </p>
           )}
