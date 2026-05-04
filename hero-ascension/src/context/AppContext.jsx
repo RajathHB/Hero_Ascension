@@ -12,6 +12,10 @@ export const XP_PER_HABIT = 20
 export const BOSS_MODE_BONUS = 100
 export const PRIORITY_MULTIPLIER = { low: 1, medium: 1.5, high: 2 }
 export const DAY_KEYS  = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+export const DAY_NAMES = {
+  sun: 'Sunday', mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday',
+  thu: 'Thursday', fri: 'Friday', sat: 'Saturday'
+}
 
 // ─── Level Logic ────────────────────────────────────────────────────
 export const calculateLevel = (xp) => Math.floor(Math.sqrt(xp / 100)) + 1
