@@ -22,7 +22,8 @@ function AppRoutes() {
 
   if (!user) return <Routes><Route path="*" element={<Login />} /></Routes>
 
-  if (!onboarded) return (
+  // Safety: If onboarded but no hero is selected, force back to onboarding
+  if (!onboarded || !selectedHeroId) return (
     <Routes>
       <Route path="/onboarding" element={<HeroSelect />} />
       <Route path="*" element={<Navigate to="/onboarding" />} />

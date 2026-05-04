@@ -23,7 +23,7 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('today')
 
-  if (!selectedHero) return null
+  if (!selectedHero) return <Navigate to="/onboarding" />
 
   return (
     <div className="page-enter pb-8">

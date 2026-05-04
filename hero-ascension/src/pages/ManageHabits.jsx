@@ -35,7 +35,12 @@ export default function ManageHabits() {
   const [showReset, setShowReset] = useState(false)
   const [importStatus, setImportStatus] = useState(null)
 
-  if (!selectedHero) return null
+  if (!selectedHero) return (
+    <div className="flex flex-col items-center justify-center p-20">
+      <p className="text-hero-muted mb-4">No hero detected. Please reset your identity.</p>
+      <button onClick={handleReset} className="btn-hero px-6 py-2 text-sm uppercase font-bold tracking-widest">Reset & Setup</button>
+    </div>
+  )
 
   const toggleDay = (dk) => setRepeatDays(prev => prev.includes(dk) ? prev.filter(d => d !== dk) : [...prev, dk])
 
@@ -198,10 +203,10 @@ export default function ManageHabits() {
           <label className="text-sm font-bold text-hero-muted w-20 flex-shrink-0 pt-2">Repeat</label>
           <div>
             <div className="flex gap-1.5">
-              {DAY_KEYS.map((dk, i) => (
+                  {DAY_KEYS.map((dk, i) => (
                 <button key={dk} onClick={() => toggleDay(dk)}
                   className={clsx("w-9 h-9 rounded-lg text-xs font-bold uppercase transition-all",
-                    repeatDays.includes(dk) ? "bg-hero-accent text-white" : "bg-black/[0.03] text-hero-muted hover:bg-black/[0.06]")}>{DAY_NAMES[i].slice(0, 2)}
+                    repeatDays.includes(dk) ? "bg-hero-accent text-white" : "bg-black/[0.03] text-hero-muted hover:bg-black/[0.06]")}>{DAY_NAMES[dk].slice(0, 2)}
                 </button>
               ))}
             </div>
