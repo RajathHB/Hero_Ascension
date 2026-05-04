@@ -11,13 +11,13 @@ def get_full_state(user_id: str = Depends(get_current_user)):
     db = get_supabase()
     
     # 1. Fetch Profile
-    profile_res = db.table("profiles").select("*").eq("user_id", user_id).single().execute()
+    profile_res = db.table("profiles").select("*").eq("user_id", user_id).execute()
     if not profile_res.data:
         # Fallback create if somehow missing
-        profile_res = db.table("profiles").insert({"user_id": user_id}).execute()
+        profile_res = db.table("profiles").insert({"user_id": user_id, "xp": 0, "onboarded": False}).execute()
         profile = profile_res.data[0]
     else:
-        profile = profile_res.data
+        profile = profile_res.data[0]
 
     # 2. Fetch Habits
     habits_res = db.table("habits").select("*").eq("user_id", user_id).execute()
