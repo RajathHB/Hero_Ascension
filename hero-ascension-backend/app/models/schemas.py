@@ -96,6 +96,15 @@ class LogToggleRequest(BaseModel):
     habit_id: str
     log_date: date = Field(default_factory=date.today)
 
+class HabitLogOut(BaseModel):
+    id: str
+    habit_id: str
+    user_id: str
+    log_date: date
+    completed: bool
+    streak_count: int
+    created_at: datetime
+
 
 # ── Calendar Todos ────────────────────────────────────────────────────
 
