@@ -52,6 +52,20 @@ class ProfileUpdate(BaseModel):
     onboarded: Optional[bool] = None
 
 
+# ── Heroes (Legacy Support) ───────────────────────────────────────────
+
+class HeroSelectRequest(BaseModel):
+    hero_ids: list[str] = Field(..., min_length=1)
+
+class UserHeroOut(BaseModel):
+    id: str
+    user_id: str
+    hero_id: str
+    current_tier: int
+    total_xp: int
+    current_month_xp: int
+
+
 # ── Habits ────────────────────────────────────────────────────────────
 
 class HabitCreate(BaseModel):
