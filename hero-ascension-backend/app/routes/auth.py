@@ -1,9 +1,6 @@
 """
 routes/auth.py
 ──────────────
-POST /auth/signup  →  create account
-POST /auth/login   →  get JWT token
-GET  /auth/me      →  get current user info
 """
 
 from fastapi import APIRouter, HTTPException, Depends, status
@@ -37,7 +34,18 @@ def signup(body: SignupRequest):
         "password_hash": hash_password(body.password),
     }).execute()
 
+    if not new_user.data:
+        raise HTTPException(status_code=500, detail="Failed to create user")
+
     user = new_user.data[0]
+    
+    # Create profile for the new user
+    db.table("profiles").insert({
+        "user_id": user["id"],
+        "xp": 0,
+        "onboarded": False
+    }).execute()
+
     token = create_token(user["id"])
 
     return TokenResponse(

@@ -1,346 +1,326 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
-import HeroCard from '../components/HeroCard'
-import { Plus, Trash2, Target, Zap, ArrowRight, Check, LogOut, Save } from 'lucide-react'
-
-const HABIT_TEMPLATES = {
-  'iron-will': ['Wake up at 6am', 'No phone in first hour', 'Plan the next day', 'Cold shower', 'Journal 5 min'],
-  'ember-fist': ['Workout 30 min', 'Hit protein goal', 'Walk 8,000 steps', 'Stretch 10 min', 'Track calories'],
-  'arcane-mind': ['Read 20 pages', 'Learn 1 new thing', 'Practice a skill 20 min', 'Review notes', 'No doom-scrolling'],
-  'golden-path': ['Log every expense', 'Review investments', 'Learn 1 finance concept', 'No impulse buys', 'Save 10% of income'],
-  'jade-spirit': ['Meditate 10 min', 'Breathwork session', 'Digital detox 1hr', 'Gratitude journal', 'Sleep 7-8hrs'],
-  'nova-heart':  ['Call a friend', 'Do 1 kind act', 'Family check-in', 'Put phone away at dinner', 'Express gratitude'],
-}
-
-function HabitForm({ hero, onAdd }) {
-  const [name, setName] = useState('')
-  const [freq, setFreq] = useState('daily')
-  const [customFrom, setCustomFrom] = useState('')
-  const [customTo, setCustomTo] = useState('')
-
-  const submit = (habitName) => {
-    const n = (habitName || name).trim()
-    if (!n) return
-    if (freq === 'custom' && (!customFrom || !customTo)) return
-    onAdd({
-      name: n,
-      heroId: hero.id,
-      frequency: freq,
-      xpValue: 10,
-      ...(freq === 'custom' ? { customFrom, customTo } : {}),
-    })
-    if (!habitName) { setName(''); setCustomFrom(''); setCustomTo('') }
-  }
-
-  return (
-    <div className="space-y-3">
-      <div className="flex gap-2">
-        <input
-          value={name}
-          onChange={e => setName(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && submit()}
-          placeholder="e.g. Read 20 pages"
-          className="input-field flex-1 py-2 text-sm"
-        />
-        <select
-          value={freq}
-          onChange={e => setFreq(e.target.value)}
-          className="input-field w-28 py-2 text-sm"
-        >
-          <option value="daily">Daily</option>
-          <option value="weekdays">Weekdays</option>
-          <option value="weekend">Weekend</option>
-          <option value="custom">Custom</option>
-        </select>
-        <button
-          onClick={() => submit()}
-          className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-all"
-          style={{ background: 'rgba(42,157,143,0.1)', border: '1px solid rgba(42,157,143,0.2)', color: '#2A9D8F' }}
-        >
-          <Plus size={18} />
-        </button>
-      </div>
-
-      {freq === 'custom' && (
-        <div className="flex gap-2 items-center page-enter">
-          <div className="flex-1">
-            <label className="font-mono text-xs uppercase mb-1 block" style={{ color: '#9E9A8C' }}>From</label>
-            <input
-              type="date"
-              value={customFrom}
-              onChange={e => setCustomFrom(e.target.value)}
-              className="input-field py-2 text-sm w-full"
-            />
-          </div>
-          <div className="flex-1">
-            <label className="font-mono text-xs uppercase mb-1 block" style={{ color: '#9E9A8C' }}>To</label>
-            <input
-              type="date"
-              value={customTo}
-              onChange={e => setCustomTo(e.target.value)}
-              min={customFrom}
-              className="input-field py-2 text-sm w-full"
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Template chips */}
-      <div className="flex flex-wrap gap-1.5">
-        {(HABIT_TEMPLATES[hero.id] || []).map(t => (
-          <button
-            key={t}
-            onClick={() => submit(t)}
-            className="px-2.5 py-1 rounded-full font-body text-xs transition-all hover:shadow-sm"
-            style={{ background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.06)', color: '#7A7668' }}
-          >
-            + {t}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
-
+import { 
+  Zap, 
+  Target, 
+  Plus, 
+  Trash2, 
+  ArrowRight, 
+  ChevronRight,
+  Shield,
+  Check
+} from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import clsx from 'clsx'
 
 export default function HabitSetup() {
-  const { selectedHeroes, habits, addHabit, removeHabit, goals, addGoal, setOnboarded, logout } = useApp()
+  const { selectedHero, habits, addHabit, removeHabit, goals, addGoal, setOnboarded } = useApp()
   const navigate = useNavigate()
+  
   const [tab, setTab] = useState('habits')
-  const [goalForm, setGoalForm] = useState({ title: '', heroId: selectedHeroes[0]?.id || '', targetValue: '', deadline: '' })
+  const [habitTitle, setHabitTitle] = useState('')
+  const [selectedTrait, setSelectedTrait] = useState('Discipline')
+  const [goalForm, setGoalForm] = useState({ title: '', durationType: 'week' })
   const [saved, setSaved] = useState(false)
 
-  const handleAddGoal = () => {
-    const t = goalForm.title.trim()
-    if (!t || !goalForm.heroId) return
-    addGoal({ ...goalForm, targetValue: parseInt(goalForm.targetValue) || 100 })
-    setGoalForm({ title: '', heroId: selectedHeroes[0]?.id || '', targetValue: '', deadline: '' })
+  if (!selectedHero) {
+    navigate('/select-heroes')
+    return null
   }
 
-  const handleSave = () => {
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+  const handleAddHabit = (title) => {
+    const t = (title || habitTitle).trim()
+    if (!t) return
+    addHabit(t, selectedTrait)
+    setHabitTitle('')
+  }
+
+  const handleAddGoal = () => {
+    if (!goalForm.title.trim()) return
+    addGoal(goalForm)
+    setGoalForm({ title: '', durationType: 'week' })
   }
 
   const handleFinish = () => {
-    setOnboarded(true)
-    navigate('/dashboard')
+    setSaved(true)
+    setTimeout(() => {
+      setOnboarded(true)
+      navigate('/dashboard')
+    }, 1500)
   }
 
-  const totalHabits = habits.length
-  const totalGoals = goals.length
+  const templates = [
+    "Early Morning Discipline",
+    "Heroic Meditation",
+    "Daily Tech Learning",
+    "Physical Conditioning",
+    "Strategic Planning"
+  ]
 
   return (
-    <div className="min-h-screen bg-hero-gradient relative overflow-hidden">
-      {/* Logout button - top right */}
-      <div className="absolute top-4 right-4 z-10">
-        <button
-          onClick={logout}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl font-body font-semibold text-sm transition-all"
-          style={{ background: 'rgba(231,111,81,0.08)', color: '#E76F51', border: '1px solid rgba(231,111,81,0.15)' }}
-        >
-          <LogOut size={14} />
-          Exit
-        </button>
-      </div>
-
-      {/* Header */}
-      <div className="text-center pt-10 pb-6 px-6 page-enter">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-4 font-mono text-xs uppercase tracking-widest"
-          style={{ background: 'rgba(42,157,143,0.08)', border: '1px solid rgba(42,157,143,0.15)', color: '#2A9D8F' }}>
-          <Zap size={12} />
-          Step 2 of 2
-        </div>
-        <h1 className="font-display text-5xl text-plasma-400 tracking-wider mb-2">
-          FORGE YOUR ARSENAL
-        </h1>
-        <p className="font-body" style={{ color: '#7A7668' }}>Add habits and goals for each of your heroes.</p>
-      </div>
-
-      {/* Tabs */}
-      <div className="max-w-3xl mx-auto px-4">
-        <div className="flex gap-2 mb-6 p-1 rounded-xl"
-          style={{ background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.06)' }}>
-          {[
-            { key: 'habits', label: `Daily Habits (${totalHabits})`, icon: '⚡' },
-            { key: 'goals', label: `Major Goals (${totalGoals})`, icon: '🎯' },
-          ].map(t => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className="flex-1 py-2.5 rounded-lg font-body font-semibold text-sm transition-all"
-              style={tab === t.key
-                ? { background: '#fff', color: '#2A9D8F', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }
-                : { color: '#9E9A8C' }
-              }
-            >
-              {t.icon} {t.label}
-            </button>
-          ))}
-        </div>
-
-        {tab === 'habits' && (
-          <div className="space-y-4 page-enter">
-            {selectedHeroes.map(hero => {
-              const heroHabits = habits.filter(h => h.heroId === hero.id)
-              return (
-                <div key={hero.id} className="glass-card p-5">
-                  <div className="flex items-center gap-3 mb-4">
-                    <span className="text-2xl">{hero.icon}</span>
-                    <div>
-                      <p className="font-display text-xl tracking-wide" style={{ color: hero.colorHex }}>{hero.name}</p>
-                      <p className="font-mono text-xs" style={{ color: '#9E9A8C' }}>{hero.domain} · {heroHabits.length} habit{heroHabits.length !== 1 ? 's' : ''}</p>
-                    </div>
-                  </div>
-
-                  {/* Existing habits */}
-                  {heroHabits.length > 0 && (
-                    <div className="space-y-2 mb-4">
-                      {heroHabits.map(h => (
-                        <div key={h.id} className="flex items-center justify-between px-3 py-2 rounded-xl"
-                          style={{ background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.05)' }}>
-                          <div className="flex items-center gap-2 min-w-0">
-                            <Check size={13} style={{ color: hero.colorHex, flexShrink: 0 }} />
-                            <span className="font-body text-sm truncate" style={{ color: '#3D3A32' }}>{h.name}</span>
-                            <span className="font-mono text-xs flex-shrink-0" style={{ color: '#C4BFAE' }}>
-                              {{ daily: 'Daily', weekdays: 'Weekdays', weekend: 'Weekend', custom: 'Custom' }[h.frequency] || h.frequency}
-                              {h.frequency === 'custom' && h.customFrom && h.customTo && (
-                                <> · {new Date(h.customFrom + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(h.customTo + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</>
-                              )}
-                            </span>
-                          </div>
-                          <button
-                            onClick={() => removeHabit(h.id)}
-                            className="transition-colors flex-shrink-0 ml-2 p-1"
-                            style={{ color: '#C4BFAE' }}
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <HabitForm hero={hero} onAdd={addHabit} />
-                </div>
-              )
-            })}
+    <div className="min-h-screen bg-hero-bg text-hero-text p-6 md:p-12 font-sans">
+      <div className="max-w-4xl mx-auto">
+        
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-hero-muted mb-4">Protocol Initialization</p>
+            <h1 className="font-serif text-5xl md:text-6xl text-hero-text leading-tight">
+              Establish your <br /><span className="italic text-hero-accent">Rituals.</span>
+            </h1>
           </div>
-        )}
+          <div className="flex gap-4">
+             <div className={clsx(
+               "px-6 py-3 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all",
+               tab === 'habits' ? "bg-hero-accent text-white shadow-hero-glow" : "bg-white text-hero-muted border border-black/[0.05]"
+             )} onClick={() => setTab('habits')}>1. Habits</div>
+             <div className={clsx(
+               "px-6 py-3 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all",
+               tab === 'goals' ? "bg-hero-accent text-white shadow-hero-glow" : "bg-white text-hero-muted border border-black/[0.05]"
+             )} onClick={() => setTab('goals')}>2. Objectives</div>
+          </div>
+        </div>
 
-        {tab === 'goals' && (
-          <div className="space-y-4 page-enter">
-            {/* Add goal form */}
-            <div className="glass-card p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <Target size={18} className="text-plasma-400" />
-                <span className="font-display text-xl text-plasma-400 tracking-wide">ADD MAJOR GOAL</span>
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <label className="label-text">Goal Title</label>
-                  <input
-                    value={goalForm.title}
-                    onChange={e => setGoalForm(f => ({ ...f, title: e.target.value }))}
-                    placeholder="e.g. Read 24 books this year"
-                    className="input-field"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="label-text">Linked Hero</label>
-                    <select
-                      value={goalForm.heroId}
-                      onChange={e => setGoalForm(f => ({ ...f, heroId: e.target.value }))}
-                      className="input-field"
-                    >
-                      {selectedHeroes.map(h => (
-                        <option key={h.id} value={h.id}>{h.icon} {h.name}</option>
-                      ))}
-                    </select>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+          
+          {/* Progress Tracker Left */}
+          <div className="lg:col-span-1 space-y-8">
+            <div className="glass-card p-8 bg-white shadow-xl border-white">
+               <div className="w-16 h-16 rounded-2xl bg-hero-accent/5 border border-hero-accent/10 flex items-center justify-center text-4xl mb-6">
+                  {selectedHero.icon}
+               </div>
+               <h2 className="font-serif text-2xl text-hero-text mb-2">{selectedHero.name}</h2>
+               <p className="text-xs text-hero-muted font-medium mb-8">Synchronizing protocols for {selectedHero.trait} archetype...</p>
+               
+               <div className="space-y-6">
+                  <div className="flex items-center gap-4">
+                     <div className={clsx("w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold transition-all", habits.length > 0 ? "bg-hero-accent text-white" : "bg-black/[0.03] text-hero-muted")}>
+                        {habits.length > 0 ? <Check size={16} /> : "1"}
+                     </div>
+                     <span className="text-[10px] font-bold uppercase tracking-widest">Habit Protocols</span>
                   </div>
-                  <div>
-                    <label className="label-text">Target (units)</label>
-                    <input
-                      type="number"
-                      value={goalForm.targetValue}
-                      onChange={e => setGoalForm(f => ({ ...f, targetValue: e.target.value }))}
-                      placeholder="e.g. 24"
-                      className="input-field"
-                      min="1"
-                    />
+                  <div className="flex items-center gap-4">
+                     <div className={clsx("w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold transition-all", goals.length > 0 ? "bg-hero-accent text-white" : "bg-black/[0.03] text-hero-muted")}>
+                        {goals.length > 0 ? <Check size={16} /> : "2"}
+                     </div>
+                     <span className="text-[10px] font-bold uppercase tracking-widest">Growth Objectives</span>
                   </div>
-                </div>
-                <div>
-                  <label className="label-text">Deadline (optional)</label>
-                  <input
-                    type="date"
-                    value={goalForm.deadline}
-                    onChange={e => setGoalForm(f => ({ ...f, deadline: e.target.value }))}
-                    className="input-field"
-                  />
-                </div>
-                <button onClick={handleAddGoal} className="btn-secondary w-full">
-                  <Plus size={16} /> Add Goal
-                </button>
-              </div>
+               </div>
             </div>
-
-            {/* Goal list */}
-            {goals.length > 0 && (
-              <div className="space-y-2">
-                {goals.map(g => {
-                  const hero = selectedHeroes.find(h => h.id === g.heroId)
-                  return (
-                    <div key={g.id} className="glass-card p-4 flex items-center gap-4">
-                      <span className="text-xl flex-shrink-0">{hero?.icon || '🎯'}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-body font-semibold text-sm truncate" style={{ color: '#3D3A32' }}>{g.title}</p>
-                        <p className="font-mono text-xs" style={{ color: '#9E9A8C' }}>
-                          Target: {g.targetValue} · {hero?.name}
-                          {g.deadline && ` · Due ${g.deadline}`}
-                        </p>
-                      </div>
-                      <div className="w-10 h-10 rounded-full border-2 flex items-center justify-center flex-shrink-0"
-                        style={{ borderColor: hero?.colorHex || '#2A9D8F', color: hero?.colorHex || '#2A9D8F' }}>
-                        <span className="font-mono text-xs font-bold">0%</span>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
           </div>
-        )}
 
-        {/* Save + Finish buttons */}
-        <div className="mt-10 pb-10 text-center">
-          {totalHabits >= 1 ? (
-            <div className="space-y-4">
-              <p className="font-mono text-xs uppercase tracking-wider" style={{ color: '#9E9A8C' }}>
-                {totalHabits} habit{totalHabits !== 1 ? 's' : ''} · {totalGoals} goal{totalGoals !== 1 ? 's' : ''}
-              </p>
-              <div className="flex items-center justify-center gap-3">
-                <button
-                  onClick={handleSave}
-                  className="btn-secondary px-8 py-3 text-base"
+          {/* Configuration Area Right */}
+          <div className="lg:col-span-2">
+            <AnimatePresence mode="wait">
+              {tab === 'habits' ? (
+                <motion.div 
+                  key="habits"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="space-y-8"
                 >
-                  <Save size={16} />
-                  {saved ? 'Saved ✓' : 'Save Progress'}
-                </button>
-                <button onClick={handleFinish} className="btn-primary px-12 py-4 text-base">
-                  Enter the Arena
-                  <ArrowRight size={18} />
-                </button>
-              </div>
-            </div>
-          ) : (
-            <p className="font-mono text-xs uppercase tracking-wider" style={{ color: '#C4BFAE' }}>
-              Add at least 1 habit to continue
-            </p>
-          )}
+                  <div className="glass-card p-10 bg-white shadow-xl border-white">
+                    <h3 className="font-serif text-2xl text-hero-text mb-8">Daily Habit Protocols</h3>
+                    
+                    <div className="flex flex-col md:flex-row gap-4 mb-10">
+                       <div className="flex-1 relative group">
+                          <input
+                            value={habitTitle}
+                            onChange={e => setHabitTitle(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleAddHabit()}
+                            placeholder="E.g., Read for 30 minutes..."
+                            className="input-hero py-6 pr-20 shadow-sm"
+                          />
+                          <button 
+                            onClick={() => handleAddHabit()}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 w-12 h-12 rounded-xl bg-hero-accent text-white flex items-center justify-center shadow-hero-glow hover:scale-105 active:scale-95 transition-all"
+                          >
+                            <Plus size={24} />
+                          </button>
+                       </div>
+                       <div className="md:w-48">
+                          <select 
+                            value={selectedTrait}
+                            onChange={(e) => setSelectedTrait(e.target.value)}
+                            className="input-hero py-6 appearance-none cursor-pointer shadow-sm"
+                          >
+                             {['Discipline', 'Health', 'Learning', 'Wealth', 'Relationships'].map(t => (
+                               <option key={t} value={t} className="bg-white text-hero-text">{t}</option>
+                             ))}
+                          </select>
+                       </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 mb-10">
+                       {templates.map(t => (
+                         <button 
+                           key={t}
+                           onClick={() => handleAddHabit(t)}
+                           className="px-4 py-2 rounded-xl bg-black/[0.02] border border-black/[0.05] text-[9px] font-bold uppercase tracking-widest text-hero-muted hover:bg-hero-accent hover:text-white hover:border-hero-accent transition-all"
+                         >
+                           + {t}
+                         </button>
+                       ))}
+                    </div>
+
+                    <div className="space-y-4">
+                       <AnimatePresence mode="popLayout">
+                          {habits.map(h => (
+                            <motion.div 
+                              key={h.id} 
+                              layout
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.95 }}
+                              className="glass-panel p-5 flex items-center justify-between border-black/[0.03] bg-white group"
+                            >
+                               <div className="flex items-center gap-4">
+                                  <div className="w-10 h-10 rounded-xl bg-hero-accent/5 flex items-center justify-center text-hero-accent border border-hero-accent/10">
+                                     <Check size={20} />
+                                  </div>
+                                  <div>
+                                     <p className="font-bold text-sm text-hero-text">{h.title}</p>
+                                     <p className="text-[9px] font-bold uppercase tracking-widest text-hero-muted">{h.trait}</p>
+                                  </div>
+                               </div>
+                               <button onClick={() => removeHabit(h.id)} className="w-10 h-10 rounded-xl bg-black/[0.02] flex items-center justify-center text-hero-muted opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 transition-all">
+                                  <Trash2 size={18} />
+                               </button>
+                            </motion.div>
+                          ))}
+                       </AnimatePresence>
+                    </div>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div 
+                  key="goals"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="space-y-8"
+                >
+                  <div className="glass-card p-10 bg-white shadow-xl border-white">
+                    <h3 className="font-serif text-2xl text-hero-text mb-8">Time-Bound Objectives</h3>
+                    <div className="space-y-8">
+                       <div>
+                          <label className="label-hero">Goal Description</label>
+                          <input
+                            value={goalForm.title}
+                            onChange={e => setGoalForm(g => ({ ...g, title: e.target.value }))}
+                            placeholder="What do you want to achieve?"
+                            className="input-hero shadow-sm"
+                          />
+                       </div>
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                          <div>
+                             <label className="label-hero">Duration Protocol</label>
+                             <div className="grid grid-cols-3 gap-3">
+                                {['week', 'month', 'custom'].map(d => (
+                                  <button
+                                    key={d}
+                                    onClick={() => setGoalForm(g => ({ ...g, durationType: d }))}
+                                    className={clsx(
+                                      "py-4 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all",
+                                      goalForm.durationType === d ? "bg-hero-accent text-white shadow-hero-glow" : "bg-black/[0.02] text-hero-muted border border-black/[0.05]"
+                                    )}
+                                  >
+                                    {d}
+                                  </button>
+                                ))}
+                             </div>
+                          </div>
+                          <div className="flex items-end">
+                             <button onClick={handleAddGoal} className="btn-hero w-full py-5">
+                                Initialize Objective
+                             </button>
+                          </div>
+                       </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <AnimatePresence mode="popLayout">
+                        {goals.map(g => (
+                          <motion.div 
+                            key={g.id} 
+                            layout
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="glass-panel p-6 flex items-center justify-between border-black/[0.03] bg-white group"
+                          >
+                             <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600 border border-purple-100">
+                                   <Target size={24} />
+                                </div>
+                                <div>
+                                   <p className="font-bold text-sm text-hero-text mb-1">{g.title}</p>
+                                   <p className="text-[10px] font-bold uppercase tracking-widest text-hero-muted">{g.durationType} cycle</p>
+                                </div>
+                             </div>
+                          </motion.div>
+                        ))}
+                     </AnimatePresence>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
+
+        {/* Action Bar */}
+        <div className="fixed bottom-0 left-0 right-0 p-8 pointer-events-none">
+           <div className="max-w-2xl mx-auto glass-card p-6 flex items-center justify-between pointer-events-auto shadow-2xl border-white ring-1 ring-black/[0.05]">
+              <div className="text-left">
+                 <p className="text-[10px] font-bold uppercase tracking-widest text-hero-muted mb-1">Initialized Roster</p>
+                 <p className="text-sm font-bold text-hero-text">{habits.length} Habits / {goals.length} Goals</p>
+              </div>
+              <div className="flex gap-4">
+                 {tab === 'habits' ? (
+                   <button onClick={() => setTab('goals')} className="btn-glass px-8 py-4 flex items-center gap-2 text-xs uppercase tracking-widest font-bold">
+                     Next Protocol <ChevronRight size={18} />
+                   </button>
+                 ) : (
+                   <button 
+                     onClick={handleFinish}
+                     disabled={habits.length === 0}
+                     className={clsx(
+                       "btn-hero px-10 py-5 text-sm",
+                       habits.length === 0 && "opacity-50 grayscale cursor-not-allowed"
+                     )}
+                   >
+                     Initiate Ascension <ArrowRight size={20} className="ml-2" />
+                   </button>
+                 )}
+              </div>
+           </div>
+        </div>
+
+        {/* Success Overlay */}
+        <AnimatePresence>
+           {saved && (
+             <motion.div 
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               exit={{ opacity: 0 }}
+               className="fixed inset-0 z-[100] flex items-center justify-center bg-white/90 backdrop-blur-xl"
+             >
+                <div className="text-center">
+                   <motion.div 
+                     initial={{ scale: 0.8, rotate: -10 }}
+                     animate={{ scale: 1, rotate: 0 }}
+                     className="w-32 h-32 bg-hero-accent text-white rounded-[3rem] flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-hero-accent/40"
+                   >
+                      <Shield size={64} className="animate-glow" />
+                   </motion.div>
+                   <h2 className="font-serif text-5xl text-hero-text mb-4">Protocols Verified.</h2>
+                   <p className="text-hero-muted font-medium uppercase tracking-[0.4em] text-xs">Entering Operation Mode</p>
+                </div>
+             </motion.div>
+           )}
+        </AnimatePresence>
       </div>
     </div>
   )

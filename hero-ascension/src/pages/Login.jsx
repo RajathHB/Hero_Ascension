@@ -1,179 +1,135 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
-import { signup as apiSignup, login as apiLogin } from '../api/client'
-import { Zap, Shield, Eye, EyeOff } from 'lucide-react'
+import { Sparkles, User, Mail, Lock, ArrowRight, Github, Loader2 } from 'lucide-react'
+import { motion } from 'framer-motion'
 
 export default function Login() {
-  const { login } = useApp()
-  const [mode, setMode] = useState('login') // 'login' | 'signup'
-  const [form, setForm] = useState({ name: '', email: '', password: '' })
-  const [showPass, setShowPass] = useState(false)
+  const { login, signup } = useApp()
+  const navigate = useNavigate()
+  const [isLogin, setIsLogin] = useState(true)
+  const [formData, setFormData] = useState({ name: '', email: '', password: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-
-  const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }))
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
-    if (!form.email || !form.password) { setError('All fields are required.'); return }
-    if (mode === 'signup' && !form.name) { setError('Enter your hero name.'); return }
-    if (form.password.length < 6) { setError('Password must be at least 6 characters.'); return }
-
     setLoading(true)
     try {
-      let data
-      if (mode === 'signup') {
-        data = await apiSignup(form.name, form.email, form.password)
+      if (isLogin) {
+        await login(formData.email, formData.password)
       } else {
-        data = await apiLogin(form.email, form.password)
+        await signup(formData.name, formData.email, formData.password)
       }
-      // Pass user_id from backend so localStorage is scoped per-user
-      login({
-        userId: data.user_id,
-        email: data.email || form.email,
-        name: data.name || form.name || form.email.split('@')[0],
-      })
+      navigate('/onboarding')
     } catch (err) {
-      setError(err.message)
+      setError(err.message || 'Authentication failed. Please check your credentials.')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-hero-gradient flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Decorative circles */}
-      <div className="absolute top-20 left-10 w-72 h-72 rounded-full blur-3xl opacity-30 pointer-events-none"
-        style={{ background: 'rgba(42,157,143,0.08)' }} />
-      <div className="absolute bottom-20 right-10 w-64 h-64 rounded-full blur-3xl opacity-30 pointer-events-none"
-        style={{ background: 'rgba(233,196,106,0.08)' }} />
+    <div className="min-h-screen bg-hero-bg flex items-center justify-center p-6 relative overflow-hidden font-sans">
+      
+      {/* Background Decor */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full blur-[120px] opacity-[0.05] bg-hero-accent" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full blur-[100px] opacity-[0.03] bg-purple-400" />
+      </div>
 
-      <div className="w-full max-w-md page-enter">
-        {/* Logo */}
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-5 relative"
-            style={{ background: 'rgba(42,157,143,0.08)', border: '1px solid rgba(42,157,143,0.15)' }}>
-            <Shield size={40} className="text-plasma-400" />
-          </div>
-          <h1 className="font-display text-5xl text-plasma-400 tracking-widest">
-            HERO ASCENSION
-          </h1>
-          <p className="font-mono text-xs mt-2 tracking-widest uppercase" style={{ color: '#9E9A8C' }}>
-            Your real life. Your hero journey.
-          </p>
-        </div>
-
-        {/* Card */}
-        <div className="glass-card p-8 relative">
-          {/* Mode toggle */}
-          <div className="flex rounded-xl overflow-hidden mb-8 p-1 gap-1"
-            style={{ background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.06)' }}>
-            {['login', 'signup'].map(m => (
-              <button
-                key={m}
-                onClick={() => { setMode(m); setError('') }}
-                className="flex-1 py-2.5 rounded-lg font-body font-semibold text-sm uppercase tracking-wider transition-all duration-200"
-                style={mode === m
-                  ? { background: '#fff', color: '#2A9D8F', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }
-                  : { color: '#9E9A8C' }
-                }
-              >
-                {m === 'login' ? '⚡ Access' : '🛡 Enlist'}
-              </button>
-            ))}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-lg relative z-10"
+      >
+        <div className="glass-card p-10 md:p-14 shadow-2xl border-white ring-1 ring-black/[0.03]">
+          
+          <div className="flex flex-col items-center mb-12 text-center">
+             <div className="w-20 h-20 rounded-3xl bg-hero-accent/10 flex items-center justify-center text-hero-accent mb-6 shadow-sm border border-hero-accent/10">
+                <Sparkles size={40} className="animate-glow" />
+             </div>
+             <h1 className="font-serif text-4xl text-hero-text mb-3 tracking-tight">Hero Ascension.</h1>
+             <p className="text-hero-muted text-sm font-medium">Initiate your transformation protocol.</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {mode === 'signup' && (
-              <div className="page-enter">
-                <label className="label-text">Hero Name</label>
-                <input
-                  type="text"
-                  value={form.name}
-                  onChange={set('name')}
-                  placeholder="What shall you be called?"
-                  className="input-field"
-                  autoComplete="name"
-                />
+          {error && (
+            <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm font-medium">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {!isLogin && (
+              <div className="space-y-2">
+                <label className="label-hero">Hero Designation</label>
+                <div className="relative">
+                  <User className="absolute left-5 top-1/2 -translate-y-1/2 text-hero-muted/50" size={18} />
+                  <input 
+                    type="text" 
+                    placeholder="Enter your name..." 
+                    className="input-hero pl-14"
+                    required={!isLogin}
+                    value={formData.name}
+                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                  />
+                </div>
               </div>
             )}
 
-            <div>
-              <label className="label-text">Email</label>
-              <input
-                type="email"
-                value={form.email}
-                onChange={set('email')}
-                placeholder="your@email.com"
-                className="input-field"
-                autoComplete="email"
-              />
-            </div>
-
-            <div>
-              <label className="label-text">Password</label>
+            <div className="space-y-2">
+              <label className="label-hero">Neural Sync Email</label>
               <div className="relative">
-                <input
-                  type={showPass ? 'text' : 'password'}
-                  value={form.password}
-                  onChange={set('password')}
-                  placeholder="Min. 6 characters"
-                  className="input-field pr-12"
-                  autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-hero-muted/50" size={18} />
+                <input 
+                  type="email" 
+                  placeholder="hero@ascension.com" 
+                  className="input-hero pl-14"
+                  required
+                  value={formData.email}
+                  onChange={e => setFormData({ ...formData, email: e.target.value })}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPass(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
-                  style={{ color: '#9E9A8C' }}
-                >
-                  {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
               </div>
             </div>
 
-            {error && (
-              <div className="px-4 py-3 rounded-xl font-body text-sm"
-                style={{ background: 'rgba(231,111,81,0.08)', border: '1px solid rgba(231,111,81,0.2)', color: '#E76F51' }}>
-                ⚠ {error}
+            <div className="space-y-2">
+              <label className="label-hero">Security Sequence</label>
+              <div className="relative">
+                <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-hero-muted/50" size={18} />
+                <input 
+                  type="password" 
+                  placeholder="••••••••" 
+                  className="input-hero pl-14"
+                  required
+                  value={formData.password}
+                  onChange={e => setFormData({ ...formData, password: e.target.value })}
+                />
               </div>
-            )}
+            </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary w-full text-base mt-2 h-12 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
+            <button type="submit" disabled={loading} className="btn-hero w-full py-5 text-base mt-4 flex items-center justify-center">
               {loading ? (
-                <span className="flex items-center gap-2">
-                  <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                  Authenticating...
-                </span>
+                <>
+                  <Loader2 size={20} className="mr-2 animate-spin" /> 
+                  Processing...
+                </>
               ) : (
-                <span className="flex items-center gap-2">
-                  <Zap size={16} />
-                  {mode === 'signup' ? 'Begin Ascension' : 'Enter the Arena'}
-                </span>
+                <>
+                  {isLogin ? 'Initiate Sync' : 'Register Identity'} <ArrowRight size={20} className="ml-2" />
+                </>
               )}
             </button>
           </form>
 
-          <p className="text-center font-mono text-xs mt-6" style={{ color: '#9E9A8C' }}>
-            {mode === 'login' ? 'No account? ' : 'Already enlisted? '}
-            <button
-              onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError('') }}
-              className="text-plasma-400 hover:underline font-semibold"
-            >
-              {mode === 'login' ? 'Enlist now' : 'Access your account'}
-            </button>
-          </p>
+          <button 
+            onClick={() => setIsLogin(!isLogin)}
+            className="w-full mt-10 text-xs font-bold uppercase tracking-widest text-hero-muted hover:text-hero-text transition-colors"
+          >
+            {isLogin ? "No identity found? Register now" : "Already registered? Return to sync"}
+          </button>
         </div>
-
-        <p className="text-center font-mono text-xs mt-6" style={{ color: '#C4BFAE' }}>
-          ◈ SECURE LOGIN · TRACK YOUR JOURNEY ◈
-        </p>
-      </div>
+      </motion.div>
     </div>
   )
 }

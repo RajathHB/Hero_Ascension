@@ -1,297 +1,235 @@
-import React, { useState } from 'react'
-import { useApp, HERO_ROSTER } from '../context/AppContext'
-import CalendarGrid from '../components/CalendarGrid'
-import StreakBadge from '../components/StreakBadge'
-import XPBar from '../components/XPBar'
-import StatCard from '../components/StatCard'
-import { CheckCircle2, Circle, ChevronDown, ChevronUp, Zap, Target, Flame, TrendingUp, Award } from 'lucide-react'
+import React, { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useApp, isHabitActiveOnDate } from '../context/AppContext'
+import { HABIT_CATEGORIES } from '../data/categories'
+import HabitGrid from '../components/HabitGrid'
+import CalendarTodo from '../components/CalendarTodo'
+import {
+  Zap, Flame, Sparkles, Calendar, Grid3X3, Settings, BarChart3
+} from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import clsx from 'clsx'
 
-function HeroHabitSection({ hero, habits, isHabitDone, toggleHabitLog, getHabitStreak, getMonthCalendarData, heroXP }) {
-  const [expanded, setExpanded] = useState(true)
-  const [showCal, setShowCal] = useState(false)
+const PRIORITY_COLORS = { low: '#6B7280', medium: '#F59E0B', high: '#EF4444' }
 
-  const heroHabits = habits.filter(h => h.heroId === hero.id)
-  if (heroHabits.length === 0) return null
+const TABS = [
+  { id: 'today', label: 'Today', icon: Zap },
+  { id: 'tracker', label: 'Tracker', icon: Grid3X3 },
+  { id: 'calendar', label: 'Calendar', icon: Calendar },
+]
 
-  const todayDone = heroHabits.filter(h => isHabitDone(h.id)).length
-  const pct = Math.round((todayDone / heroHabits.length) * 100)
-  const xp = heroXP[hero.id] || 0
+export default function Dashboard() {
+  const { selectedHero, xp, streak, level, levelProgress } = useApp()
+  const navigate = useNavigate()
+  const [activeTab, setActiveTab] = useState('today')
+
+  if (!selectedHero) return null
 
   return (
-    <div className="glass-card overflow-hidden transition-all duration-300"
-      style={{ borderLeft: `3px solid ${hero.colorHex}` }}>
-      {/* Hero header */}
-      <div
-        className="flex items-center gap-3 p-4 cursor-pointer select-none transition-colors"
-        onClick={() => setExpanded(e => !e)}
-        style={{ background: expanded ? `${hero.colorHex}05` : 'transparent' }}
-      >
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
-          style={{ background: `${hero.colorHex}10` }}>
-          {hero.icon}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-display text-lg tracking-wide" style={{ color: hero.colorHex }}>
-              {hero.name}
-            </span>
-            <span className="font-mono text-xs" style={{ color: '#9E9A8C' }}>{todayDone}/{heroHabits.length} today</span>
+    <div className="page-enter pb-8">
+      {/* Hero Header — single compact row */}
+      <div className="flex items-center gap-4 mb-4">
+        <div className="relative flex-shrink-0">
+          <div className="w-14 h-14 rounded-xl bg-white border border-black/[0.05] flex items-center justify-center text-3xl shadow-sm">
+            {selectedHero.icon}
           </div>
-          <XPBar pct={pct} color={hero.color} height="h-1.5" className="mt-1.5 max-w-48" showPct={false} />
-        </div>
-        <div className="flex items-center gap-3 flex-shrink-0">
-          <div className="text-right hidden sm:block">
-            <p className="font-display text-xl" style={{ color: hero.colorHex }}>{xp}</p>
-            <p className="font-mono text-xs" style={{ color: '#C4BFAE' }}>XP</p>
-          </div>
-          <span style={{ color: '#9E9A8C' }}>
-            {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-          </span>
-        </div>
-      </div>
-
-      {/* Habit list */}
-      {expanded && (
-        <div className="px-4 pb-4 space-y-2">
-          {heroHabits.map(habit => {
-            const done = isHabitDone(habit.id)
-            const streak = getHabitStreak(habit.id)
-            return (
-              <div
-                key={habit.id}
-                className={clsx(
-                  'flex items-center gap-3 p-3 rounded-xl transition-all duration-200 cursor-pointer group',
-                )}
-                style={{
-                  background: done ? `${hero.colorHex}06` : 'rgba(0,0,0,0.015)',
-                  border: done ? `1px solid ${hero.colorHex}20` : '1px solid rgba(0,0,0,0.04)',
-                }}
-                onClick={() => toggleHabitLog(habit.id)}
-              >
-                {/* Checkbox */}
-                <div className={clsx(
-                  'w-7 h-7 rounded-lg border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200',
-                )}
-                  style={done
-                    ? { background: `${hero.colorHex}15`, borderColor: `${hero.colorHex}50` }
-                    : { borderColor: 'rgba(0,0,0,0.12)' }
-                  }>
-                  {done
-                    ? <CheckCircle2 size={16} style={{ color: hero.colorHex }} />
-                    : <Circle size={16} style={{ color: '#C4BFAE' }} className="group-hover:text-warm-500 transition-colors" />
-                  }
-                </div>
-
-                {/* Habit name */}
-                <div className="flex-1 min-w-0">
-                  <p className={clsx(
-                    'font-body font-semibold text-sm transition-all',
-                    done ? 'line-through' : ''
-                  )} style={{ color: done ? '#9E9A8C' : '#3D3A32' }}>
-                    {habit.name}
-                  </p>
-                  <p className="font-mono text-xs" style={{ color: '#C4BFAE' }}>{habit.frequency}</p>
-                </div>
-
-                {/* Right side */}
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {streak > 0 && <StreakBadge streak={streak} />}
-                  <span className="font-mono text-xs" style={{ color: '#C4BFAE' }}>+{habit.xpValue}xp</span>
-                </div>
-              </div>
-            )
-          })}
-
-          {/* Calendar toggle */}
-          <button
-            onClick={(e) => { e.stopPropagation(); setShowCal(v => !v) }}
-            className="w-full text-center font-mono text-xs py-1.5 transition-colors"
-            style={{ color: '#9E9A8C' }}
-          >
-            {showCal ? '▲ Hide calendar' : '▼ Show monthly calendar'}
-          </button>
-
-          {showCal && (
-            <div className="pt-2 space-y-3">
-              {heroHabits.map(habit => (
-                <div key={habit.id}>
-                  <p className="font-mono text-xs mb-1.5 truncate" style={{ color: '#9E9A8C' }}>{habit.name}</p>
-                  <CalendarGrid data={getMonthCalendarData(habit.id)} color={hero.color} compact />
-                </div>
-              ))}
+          {streak > 0 && (
+            <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-md bg-orange-500 text-white flex items-center justify-center text-[10px] font-bold shadow-sm">
+              🔥{streak}
             </div>
           )}
         </div>
-      )}
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-3">
+            <h1 className="font-serif text-2xl text-hero-text truncate">{selectedHero.name}</h1>
+            <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 bg-hero-accent/10 text-hero-accent rounded-md flex-shrink-0">{selectedHero.trait}</span>
+            <span className="text-sm font-bold text-hero-muted flex-shrink-0">Lvl {level} · {xp} XP</span>
+          </div>
+          <div className="flex items-center gap-2 mt-1">
+            <div className="flex-1 max-w-[200px] h-1.5 bg-black/[0.04] rounded-full overflow-hidden">
+              <motion.div initial={{ width: 0 }} animate={{ width: `${levelProgress.pct}%` }} className="h-full bg-hero-accent rounded-full" />
+            </div>
+            <span className="text-xs text-hero-muted font-medium">{levelProgress.current}/{levelProgress.needed} to Lvl {level + 1}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <button onClick={() => navigate('/stats')} className="w-9 h-9 rounded-lg bg-white border border-black/[0.05] flex items-center justify-center text-hero-muted hover:text-hero-accent transition-colors">
+            <BarChart3 size={16} />
+          </button>
+          <button onClick={() => navigate('/manage')} className="w-9 h-9 rounded-lg bg-white border border-black/[0.05] flex items-center justify-center text-hero-muted hover:text-hero-text transition-colors">
+            <Settings size={16} />
+          </button>
+        </div>
+      </div>
+
+      {/* Tab Switcher — slimmer */}
+      <div className="flex items-center gap-1 p-1 bg-black/[0.02] rounded-xl border border-black/[0.03] mb-4">
+        {TABS.map(tab => {
+          const Icon = tab.icon
+          const isActive = activeTab === tab.id
+          return (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+              className={clsx("flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-200",
+                isActive ? "bg-white text-hero-text shadow-sm" : "text-hero-muted hover:text-hero-text")}>
+              <Icon size={14} />{tab.label}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Tab Content */}
+      <AnimatePresence mode="wait">
+        {activeTab === 'today' && <motion.div key="today" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.12 }}><TodayView /></motion.div>}
+        {activeTab === 'tracker' && <motion.div key="tracker" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.12 }}><HabitGrid /></motion.div>}
+        {activeTab === 'calendar' && <motion.div key="calendar" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.12 }}><CalendarTodo /></motion.div>}
+      </AnimatePresence>
     </div>
   )
 }
 
-export default function Dashboard() {
-  const {
-    user, selectedHeroes, habits, goals,
-    isHabitDone, toggleHabitLog, getHabitStreak,
-    getMonthCalendarData, heroXP, today,
-    todayCompletionCount, updateGoalProgress,
-  } = useApp()
+// ─── Today View ─────────────────────────────────────────────────────
+function TodayView() {
+  const { habits, logs, toggleHabit, today, calendarTodos, addCalendarTodo } = useApp()
+  const [dailyFocus, setDailyFocus] = useState('')
 
-  const totalHabits = habits.length
-  const doneToday = todayCompletionCount()
-  const overallPct = totalHabits > 0 ? Math.round((doneToday / totalHabits) * 100) : 0
-  const totalXP = Object.values(heroXP).reduce((a, b) => a + b, 0)
-  const activeGoals = goals.filter(g => g.status === 'active')
+  const activeToday = useMemo(() => habits.filter(h => isHabitActiveOnDate(h, today)), [habits, today])
 
-  // Best streak across all habits
-  const bestStreak = habits.reduce((best, h) => {
-    const s = getHabitStreak(h.id)
-    return s > best ? s : best
-  }, 0)
+  const grouped = useMemo(() => {
+    const map = {}
+    activeToday.forEach(h => {
+      const cat = h.category || 'fitness'
+      if (!map[cat]) map[cat] = []
+      map[cat].push(h)
+    })
+    return Object.entries(map).map(([catId, items]) => {
+      const catDef = HABIT_CATEGORIES.find(c => c.id === catId) || HABIT_CATEGORIES[0]
+      return { ...catDef, habits: items }
+    })
+  }, [activeToday])
 
-  const dateLabel = new Date(today + 'T00:00:00').toLocaleDateString('en-US', {
-    weekday: 'long', month: 'long', day: 'numeric'
-  })
+  const todayDone = activeToday.filter(h => logs[`${h.id}_${today}`]).length
+  const todayTotal = activeToday.length
+  const todayPct = todayTotal > 0 ? Math.round((todayDone / todayTotal) * 100) : 0
+  const allDone = todayDone === todayTotal && todayTotal > 0
 
-  // Motivational message based on progress
-  const getMessage = () => {
-    if (doneToday === totalHabits && totalHabits > 0) return { text: '🏆 All habits complete. Legendary day!', style: { color: '#52B788' } }
-    if (overallPct >= 75) return { text: '🔥 Almost there! Finish strong.', style: { color: '#E76F51' } }
-    if (overallPct >= 50) return { text: '⚡ Great momentum. Keep pushing.', style: { color: '#E9C46A' } }
-    if (doneToday === 0) return { text: 'Your heroes are waiting. Begin your streak.', style: { color: '#9E9A8C' } }
-    return { text: `${totalHabits - doneToday} habit${totalHabits - doneToday !== 1 ? 's' : ''} left. Keep pushing.`, style: { color: '#7A7668' } }
+  const todayTodos = calendarTodos[today] || []
+  const dateLabel = new Date(today + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+
+  const handleAddFocus = (e) => {
+    e.preventDefault()
+    if (!dailyFocus.trim()) return
+    addCalendarTodo(today, dailyFocus.trim())
+    setDailyFocus('')
   }
-  const msg = getMessage()
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      {/* Greeting */}
-      <div className="mb-8 page-enter">
-        <p className="font-mono text-xs uppercase tracking-widest mb-1" style={{ color: '#9E9A8C' }}>{dateLabel}</p>
-        <h1 className="font-display text-4xl tracking-wide" style={{ color: '#3D3A32' }}>
-          READY,{' '}
-          <span className="text-plasma-400">{user?.name?.toUpperCase() || 'HERO'}</span>
-        </h1>
-        <p className="font-body mt-1" style={msg.style}>{msg.text}</p>
-      </div>
-
-      {/* Stats row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8 page-enter page-enter-delay-1">
-        <StatCard
-          label="Today"
-          value={`${doneToday}/${totalHabits}`}
-          sub="habits done"
-          color="plasma"
-          icon={<Zap size={16} className="text-plasma-400" />}
-        />
-        <StatCard
-          label="Total XP"
-          value={totalXP}
-          sub="across heroes"
-          color="gold"
-          icon={<Flame size={16} className="text-gold-400" />}
-        />
-        <StatCard
-          label="Goals"
-          value={activeGoals.length}
-          sub="in progress"
-          color="arcane"
-          icon={<Target size={16} className="text-arcane-400" />}
-        />
-        <StatCard
-          label="Best Streak"
-          value={`${bestStreak}d`}
-          sub="consecutive"
-          color="ember"
-          icon={<Award size={16} className="text-ember-400" />}
-        />
-      </div>
-
-      {/* Overall progress bar */}
-      <div className="glass-card p-5 mb-8 page-enter page-enter-delay-2">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <TrendingUp size={16} style={{ color: '#2A9D8F' }} />
-            <span className="font-mono text-xs uppercase tracking-wider" style={{ color: '#7A7668' }}>Daily Progress</span>
+    <div className="space-y-4">
+      {/* Compact Focus + Progress Row */}
+      <div className="glass-card p-4">
+        <div className="flex items-center gap-4">
+          {/* Mini progress ring */}
+          <div className="relative w-12 h-12 flex-shrink-0">
+            <svg className="w-full h-full transform -rotate-90">
+              <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="3" fill="transparent" className="text-black/[0.04]" />
+              <motion.circle initial={{ strokeDashoffset: 126 }} animate={{ strokeDashoffset: 126 - (126 * todayPct) / 100 }}
+                cx="24" cy="24" r="20" stroke="var(--hero-accent)" strokeWidth="3" strokeDasharray="126" fill="transparent" strokeLinecap="round" />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-xs font-bold text-hero-text">{todayPct}%</span>
+            </div>
           </div>
-          <span className={clsx(
-            'font-display text-3xl',
-            overallPct === 100 ? 'text-jade-400' : 'text-plasma-400'
-          )}>{overallPct}%</span>
+
+          {/* Date + Progress summary */}
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-hero-muted uppercase tracking-wider">{dateLabel}</p>
+            <p className="text-base font-bold text-hero-text">
+              {allDone ? '🎉 All Done!' : `${todayDone} of ${todayTotal} Done`}
+              {allDone && <span className="text-hero-accent ml-2 text-xs">+100 XP</span>}
+            </p>
+          </div>
+
+          {/* Done / Left counters */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="text-center">
+              <p className="text-xl font-bold text-hero-text leading-none">{todayDone}</p>
+              <p className="text-[10px] font-bold uppercase text-hero-muted mt-0.5">Done</p>
+            </div>
+            <div className="w-px h-6 bg-black/[0.06]" />
+            <div className="text-center">
+              <p className="text-xl font-bold text-hero-muted leading-none">{todayTotal - todayDone}</p>
+              <p className="text-[10px] font-bold uppercase text-hero-muted mt-0.5">Left</p>
+            </div>
+          </div>
+
+          {/* Inline focus input */}
+          <form onSubmit={handleAddFocus} className="hidden md:flex items-center gap-1.5 flex-shrink-0">
+            <input value={dailyFocus} onChange={e => setDailyFocus(e.target.value)} placeholder="Quick task..."
+              className="w-44 px-3 py-2 rounded-lg bg-black/[0.02] border border-black/[0.05] text-sm outline-none focus:border-hero-accent/30 transition-all" />
+            <button type="submit" className="px-3 py-2 rounded-lg bg-hero-accent text-white text-xs font-bold hover:scale-105 active:scale-95 transition-transform">Add</button>
+          </form>
         </div>
-        <XPBar pct={overallPct} color={overallPct === 100 ? 'jade' : 'plasma'} height="h-3" showPct={false} />
-        {overallPct === 100 && totalHabits > 0 && (
-          <div className="mt-3 text-center">
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full font-body text-sm font-semibold"
-              style={{ background: 'rgba(82,183,136,0.1)', color: '#52B788', border: '1px solid rgba(82,183,136,0.2)' }}>
-              🎉 Perfect day achieved!
-            </span>
+
+        {/* Mobile focus input */}
+        <form onSubmit={handleAddFocus} className="flex md:hidden items-center gap-1.5 mt-3">
+          <input value={dailyFocus} onChange={e => setDailyFocus(e.target.value)} placeholder="Quick task..."
+            className="flex-1 px-3 py-2 rounded-lg bg-black/[0.02] border border-black/[0.05] text-sm outline-none focus:border-hero-accent/30 transition-all" />
+          <button type="submit" className="px-3 py-2 rounded-lg bg-hero-accent text-white text-xs font-bold">Add</button>
+        </form>
+
+        {/* Focus tags */}
+        {todayTodos.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {todayTodos.map(t => (
+              <span key={t.id} className={clsx("text-xs font-medium px-2 py-0.5 rounded-md", t.done ? "bg-green-50 text-green-600 line-through" : "bg-black/[0.03] text-hero-text")}>
+                {t.done ? '✓' : '○'} {t.title}
+              </span>
+            ))}
           </div>
         )}
       </div>
 
-      {/* Habit sections by hero */}
-      <div className="space-y-4 page-enter page-enter-delay-3">
-        <h2 className="font-mono text-xs uppercase tracking-widest" style={{ color: '#9E9A8C' }}>Today's Missions</h2>
-        {selectedHeroes.map(hero => (
-          <HeroHabitSection
-            key={hero.id}
-            hero={hero}
-            habits={habits}
-            isHabitDone={isHabitDone}
-            toggleHabitLog={toggleHabitLog}
-            getHabitStreak={getHabitStreak}
-            getMonthCalendarData={getMonthCalendarData}
-            heroXP={heroXP}
-          />
-        ))}
-      </div>
-
-      {/* Goals section */}
-      {goals.length > 0 && (
-        <div className="mt-8 page-enter page-enter-delay-4">
-          <h2 className="font-mono text-xs uppercase tracking-widest mb-3" style={{ color: '#9E9A8C' }}>Major Goals</h2>
-          <div className="space-y-3">
-            {goals.map(goal => {
-              const hero = HERO_ROSTER.find(h => h.id === goal.heroId)
-              const pct = Math.min(100, Math.round((goal.currentValue / goal.targetValue) * 100))
+      {/* Habits — compact single-line rows inside one card */}
+      <div className="glass-card overflow-hidden divide-y divide-black/[0.04]">
+        {grouped.map(group => (
+          <div key={group.id}>
+            {/* Category header row */}
+            <div className="flex items-center gap-2 px-4 py-2 bg-black/[0.01]">
+              <span className="text-sm">{group.icon}</span>
+              <span className="text-xs font-bold uppercase tracking-wider" style={{ color: group.color }}>{group.label}</span>
+              <span className="text-xs text-hero-muted ml-auto">{group.habits.filter(h => logs[`${h.id}_${today}`]).length}/{group.habits.length}</span>
+            </div>
+            {/* Habit rows */}
+            {group.habits.map(h => {
+              const isDone = logs[`${h.id}_${today}`]
               return (
-                <div key={goal.id} className="glass-card p-4">
-                  <div className="flex items-start gap-3">
-                    <span className="text-xl mt-0.5">{hero?.icon || '🎯'}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <p className="font-body font-semibold text-sm" style={{ color: '#3D3A32' }}>{goal.title}</p>
-                        <span
-                          className="font-mono text-xs font-bold flex-shrink-0"
-                          style={{ color: hero?.colorHex || '#2A9D8F' }}
-                        >
-                          {goal.currentValue}/{goal.targetValue}
-                        </span>
-                      </div>
-                      <XPBar pct={pct} color={hero?.color || 'plasma'} height="h-1.5" showPct={false} />
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="font-mono text-xs" style={{ color: '#9E9A8C' }}>
-                          {goal.deadline ? `Due ${goal.deadline}` : hero?.name}
-                        </span>
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => updateGoalProgress(goal.id, Math.max(0, goal.currentValue - 1))}
-                            className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors font-body font-bold"
-                            style={{ background: 'rgba(0,0,0,0.04)', color: '#7A7668' }}
-                          >−</button>
-                          <button
-                            onClick={() => updateGoalProgress(goal.id, goal.currentValue + 1)}
-                            className="w-7 h-7 rounded-lg flex items-center justify-center font-bold transition-colors"
-                            style={{ background: `${hero?.colorHex || '#2A9D8F'}12`, color: hero?.colorHex || '#2A9D8F' }}
-                          >+</button>
-                        </div>
-                      </div>
-                    </div>
+                <motion.div key={h.id} layout
+                  className={clsx("flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-all hover:bg-black/[0.01]", isDone && "opacity-60")}
+                  onClick={() => toggleHabit(h.id, today)} whileTap={{ scale: 0.99 }}>
+                  <div className={clsx("w-5 h-5 rounded-md flex items-center justify-center transition-all duration-200 flex-shrink-0",
+                    isDone ? "bg-hero-accent text-white" : "border-2 border-black/[0.1]")}>
+                    {isDone && <span className="text-[10px] leading-none">✓</span>}
                   </div>
-                </div>
+                  <p className={clsx("flex-1 text-sm font-medium truncate", isDone ? "text-hero-muted line-through" : "text-hero-text")}>{h.title}</p>
+                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: PRIORITY_COLORS[h.priority] || PRIORITY_COLORS.medium }} />
+                  <span className={clsx("text-xs font-bold flex-shrink-0 tabular-nums",
+                    isDone ? "text-hero-accent" : "text-hero-muted")}>
+                    +{h.xp_reward} XP
+                  </span>
+                </motion.div>
               )
             })}
           </div>
+        ))}
+      </div>
+
+      {activeToday.length === 0 && (
+        <div className="glass-card p-10 text-center">
+          <Sparkles size={32} className="mx-auto mb-2 text-hero-muted/20" />
+          <p className="text-hero-muted font-medium text-sm">
+            {habits.length === 0 ? 'No habits configured yet — Go to Settings' : 'No habits scheduled for today'}
+          </p>
         </div>
       )}
     </div>

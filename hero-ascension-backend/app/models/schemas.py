@@ -1,8 +1,7 @@
 """
 models/schemas.py
 ─────────────────
-All Pydantic request/response schemas in one file.
-Kept flat and simple — no deep nesting.
+All Pydantic request/response schemas.
 """
 
 from __future__ import annotations
@@ -32,7 +31,7 @@ class TokenResponse(BaseModel):
     email: str
 
 
-# ── Users ─────────────────────────────────────────────────────────────
+# ── Users & Profiles ──────────────────────────────────────────────────
 
 class UserOut(BaseModel):
     id: str
@@ -40,38 +39,40 @@ class UserOut(BaseModel):
     email: str
     created_at: datetime
 
-
-# ── Heroes ────────────────────────────────────────────────────────────
-
-class HeroSelectRequest(BaseModel):
-    hero_ids: list[str] = Field(..., min_length=1)
-
-
-class UserHeroOut(BaseModel):
-    id: str
+class ProfileOut(BaseModel):
     user_id: str
-    hero_id: str
-    current_tier: int       # 0 = base tier
-    total_xp: int
-    current_month_xp: int
+    selected_hero_id: Optional[str]
+    xp: int
+    onboarded: bool
+    updated_at: datetime
+
+class ProfileUpdate(BaseModel):
+    selected_hero_id: Optional[str] = None
+    xp: Optional[int] = None
+    onboarded: Optional[bool] = None
 
 
 # ── Habits ────────────────────────────────────────────────────────────
 
 class HabitCreate(BaseModel):
-    name: str = Field(..., min_length=1, max_length=200)
-    hero_id: str
-    frequency: Literal["daily", "weekdays", "weekly"] = "daily"
-    xp_value: int = Field(default=10, ge=1, le=100)
+    id: str # h_uuid from frontend
+    title: str = Field(..., min_length=1, max_length=200)
+    category: str = "fitness"
+    monthly_goal: int = 25
+    repeat_days: list[str] = []
+    priority: str = "medium"
+    xp_reward: int = 20
 
 
 class HabitOut(BaseModel):
     id: str
     user_id: str
-    hero_id: str
-    name: str
-    frequency: str
-    xp_value: int
+    title: str
+    category: str
+    monthly_goal: int
+    repeat_days: list[str]
+    priority: str
+    xp_reward: int
     created_at: datetime
 
 
@@ -82,61 +83,27 @@ class LogToggleRequest(BaseModel):
     log_date: date = Field(default_factory=date.today)
 
 
-class HabitLogOut(BaseModel):
-    id: str
-    habit_id: str
-    user_id: str
-    log_date: date
-    completed: bool
-    streak_count: int
+# ── Calendar Todos ────────────────────────────────────────────────────
 
-
-# ── Goals ─────────────────────────────────────────────────────────────
-
-class GoalCreate(BaseModel):
-    title: str = Field(..., min_length=1, max_length=300)
-    hero_id: str
-    target_value: int = Field(default=100, ge=1)
-    deadline: Optional[date] = None
-
-
-class GoalProgressUpdate(BaseModel):
-    current_value: int = Field(..., ge=0)
-
-
-class GoalOut(BaseModel):
-    id: str
-    user_id: str
-    hero_id: str
+class TodoCreate(BaseModel):
+    id: str # ct_timestamp
+    todo_date: date
     title: str
-    target_value: int
-    current_value: int
-    deadline: Optional[date]
-    status: str
+    completed: bool = False
+
+class TodoOut(BaseModel):
+    id: str
+    user_id: str
+    todo_date: date
+    title: str
+    completed: bool
     created_at: datetime
 
 
-# ── Monthly Evaluation ────────────────────────────────────────────────
+# ── Sync ──────────────────────────────────────────────────────────────
 
-class MonthlyEvalOut(BaseModel):
-    hero_id: str
-    month: int
-    year: int
-    habits_target: int
-    habits_done: int
-    completion_rate: float
-    xp_earned: int
-    evolved: bool
-    new_tier: int
-    tier_name: str
-
-
-# ── Dashboard summary ─────────────────────────────────────────────────
-
-class DashboardOut(BaseModel):
-    total_habits: int
-    done_today: int
-    overall_pct: int
-    total_xp: int
-    active_goals: int
-    heroes: list[dict]
+class SyncStateResponse(BaseModel):
+    profile: ProfileOut
+    habits: list[HabitOut]
+    logs: dict[str, bool] # key: habitId_dateStr
+    calendar_todos: dict[str, list[TodoOut]] # key: dateStr

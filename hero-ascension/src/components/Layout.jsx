@@ -1,70 +1,46 @@
 import React from 'react'
-import { Outlet, NavLink } from 'react-router-dom'
-import { LayoutDashboard, Trophy, Settings, LogOut } from 'lucide-react'
+import { Outlet, useNavigate } from 'react-router-dom'
+import { LogOut, Sparkles } from 'lucide-react'
 import { useApp } from '../context/AppContext'
-import clsx from 'clsx'
 
 export default function Layout() {
-  const { user, logout } = useApp()
+  const { user, logout, selectedHero } = useApp()
+  const navigate = useNavigate()
+
+  const handleLogout = () => { logout(); navigate('/login') }
 
   return (
-    <div className="min-h-screen bg-hero-gradient flex flex-col">
-      {/* Top bar */}
-      <header className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+    <div className="min-h-screen bg-hero-bg text-hero-text font-sans flex flex-col">
+      {/* Top Header */}
+      <header className="h-16 flex items-center justify-between px-6 md:px-12 sticky top-0 z-40 bg-white/70 backdrop-blur-md border-b border-black/[0.03]">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-            style={{ background: 'rgba(42,157,143,0.1)', border: '1px solid rgba(42,157,143,0.15)' }}>
-            <span className="text-plasma-400 font-display text-sm">HA</span>
+          <div className="w-9 h-9 rounded-lg bg-hero-accent/10 flex items-center justify-center text-hero-accent">
+            <Sparkles size={18} className="animate-glow" />
           </div>
-          <span className="font-display text-xl text-plasma-400 tracking-widest">HERO ASCENSION</span>
+          <h1 className="font-serif text-xl font-bold tracking-tight">Hero Ascension.</h1>
         </div>
         <div className="flex items-center gap-4">
-          <span className="font-mono text-xs uppercase tracking-wider hidden sm:block" style={{ color: '#9E9A8C' }}>
-            {user?.name}
+          <span className="text-xs font-bold uppercase tracking-widest text-hero-muted hidden md:inline">
+            {user?.name || 'Hero'} • {selectedHero?.trait || '—'}
           </span>
-          <button
-            onClick={logout}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-body font-semibold transition-all"
-            style={{ color: '#E76F51', background: 'rgba(231,111,81,0.06)' }}
-          >
-            <LogOut size={14} />
-            <span className="hidden sm:block">Exit</span>
+          <button onClick={handleLogout} className="w-9 h-9 rounded-lg bg-black/[0.02] flex items-center justify-center text-hero-muted hover:text-red-500 hover:bg-red-50 transition-all border border-black/[0.03]">
+            <LogOut size={16} />
           </button>
         </div>
       </header>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-auto pb-24">
-        <Outlet />
+      {/* Content */}
+      <main className="flex-1">
+        <div className="max-w-7xl mx-auto p-6 md:p-10">
+          <Outlet />
+        </div>
       </main>
 
-      {/* Bottom nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 pt-2">
-        <div className="glass-card max-w-sm mx-auto flex items-center justify-around px-2 py-1"
-          style={{ boxShadow: '0 -4px 20px rgba(0,0,0,0.06)' }}>
-          <NavLink
-            to="/dashboard"
-            className={({ isActive }) => clsx('nav-item', isActive && 'active')}
-          >
-            <LayoutDashboard size={20} />
-            <span>Command</span>
-          </NavLink>
-          <NavLink
-            to="/manage"
-            className={({ isActive }) => clsx('nav-item', isActive && 'active')}
-          >
-            <Settings size={20} />
-            <span>Manage</span>
-          </NavLink>
-          <NavLink
-            to="/progress"
-            className={({ isActive }) => clsx('nav-item', isActive && 'active')}
-          >
-            <Trophy size={20} />
-            <span>Heroes</span>
-          </NavLink>
-        </div>
-      </nav>
+      {/* Background Decor */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+        <div className="absolute top-[10%] left-[-5%] w-[500px] h-[500px] rounded-full blur-[100px] opacity-[0.04] bg-hero-accent" />
+        <div className="absolute bottom-[5%] right-[-5%] w-[400px] h-[400px] rounded-full blur-[80px] opacity-[0.03] bg-purple-400" />
+      </div>
     </div>
   )
 }

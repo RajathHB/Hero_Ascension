@@ -1,17 +1,12 @@
 """
 routes/habits.py
 ────────────────
-GET    /habits          →  list all user's habits
-POST   /habits          →  create a habit
-DELETE /habits/{id}     →  delete a habit
-GET    /habits/{id}/streak  →  get streak for one habit
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from app.db import get_supabase
 from app.models.schemas import HabitCreate, HabitOut
 from app.services.auth_service import get_current_user
-from app.services.streak_engine import calculate_streak
 
 router = APIRouter(prefix="/habits", tags=["Habits"])
 
@@ -33,27 +28,19 @@ def list_habits(user_id: str = Depends(get_current_user)):
 def create_habit(body: HabitCreate, user_id: str = Depends(get_current_user)):
     db = get_supabase()
 
-    # Verify the hero belongs to this user
-    hero_check = (
-        db.table("user_heroes")
-        .select("id")
-        .eq("user_id", user_id)
-        .eq("hero_id", body.hero_id)
-        .execute()
-    )
-    if not hero_check.data:
-        raise HTTPException(
-            status_code=400,
-            detail="Hero not found. Select this hero first.",
-        )
-
     result = db.table("habits").insert({
+        "id": body.id,
         "user_id": user_id,
-        "hero_id": body.hero_id,
-        "name": body.name.strip(),
-        "frequency": body.frequency,
-        "xp_value": body.xp_value,
+        "title": body.title.strip(),
+        "category": body.category,
+        "monthly_goal": body.monthly_goal,
+        "repeat_days": body.repeat_days,
+        "priority": body.priority,
+        "xp_reward": body.xp_reward,
     }).execute()
+
+    if not result.data:
+        raise HTTPException(status_code=500, detail="Failed to create habit")
 
     return result.data[0]
 
@@ -74,9 +61,3 @@ def delete_habit(habit_id: str, user_id: str = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Habit not found")
 
     db.table("habits").delete().eq("id", habit_id).execute()
-
-
-@router.get("/{habit_id}/streak")
-def get_streak(habit_id: str, user_id: str = Depends(get_current_user)):
-    streak = calculate_streak(habit_id, user_id)
-    return {"habit_id": habit_id, "streak": streak}

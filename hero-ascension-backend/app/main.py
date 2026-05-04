@@ -17,6 +17,7 @@ from app.routes import (
     tracker_router,
     goals_router,
     dashboard_router,
+    sync_router,
 )
 
 load_dotenv()
@@ -48,6 +49,7 @@ app.include_router(habits_router)
 app.include_router(tracker_router)
 app.include_router(goals_router)
 app.include_router(dashboard_router)
+app.include_router(sync_router)
 
 
 # ── Health check ──────────────────────────────────────────────────────
