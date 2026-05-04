@@ -6,6 +6,7 @@ All routers are registered here. CORS is configured for the frontend URL.
 """
 
 import os
+print("🚀 Hero Ascension API is starting up...")
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
