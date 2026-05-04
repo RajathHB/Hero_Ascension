@@ -106,6 +106,29 @@ class HabitLogOut(BaseModel):
     created_at: datetime
 
 
+# ── Goals (Legacy Support) ───────────────────────────────────────────
+
+class GoalCreate(BaseModel):
+    hero_id: str
+    title: str
+    target_value: int
+    deadline: Optional[date] = None
+
+class GoalOut(BaseModel):
+    id: str
+    user_id: str
+    hero_id: str
+    title: str
+    target_value: int
+    current_value: int
+    deadline: Optional[date]
+    status: str
+    created_at: datetime
+
+class GoalProgressUpdate(BaseModel):
+    current_value: int
+
+
 # ── Calendar Todos ────────────────────────────────────────────────────
 
 class TodoCreate(BaseModel):
