@@ -184,12 +184,12 @@ export default function Onboarding() {
                     <div className="flex-1">
                       <div className="flex gap-1.5 flex-wrap">
                         {DAY_KEYS.map((dk, i) => (
-                          <button key={dk} onClick={() => toggleDay(dk)}
+                            <button key={dk} onClick={() => toggleDay(dk)}
                             className={clsx(
                               "w-10 h-10 rounded-lg text-xs font-bold uppercase transition-all",
                               habitRepeatDays.includes(dk) ? "bg-hero-accent text-white shadow-sm" : "bg-black/[0.03] text-hero-muted hover:bg-black/[0.06]"
                             )}>
-                            {DAY_NAMES[i].slice(0, 2)}
+                            {DAY_NAMES[dk].slice(0, 2)}
                           </button>
                         ))}
                       </div>
