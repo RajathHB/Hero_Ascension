@@ -9,7 +9,7 @@ import ManageHabits from './pages/ManageHabits'
 import Layout from './components/Layout'
 
 function AppRoutes() {
-  const { user, onboarded, loading } = useApp()
+  const { user, onboarded, loading, selectedHeroId } = useApp()
 
   if (loading) return (
     <div className="min-h-screen bg-hero-bg flex items-center justify-center">
