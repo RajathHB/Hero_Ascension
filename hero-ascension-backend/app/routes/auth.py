@@ -17,87 +17,101 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 def signup(body: SignupRequest):
     db = get_supabase()
 
-    # Check if email already exists
-    existing = (
-        db.table("users")
-        .select("id")
-        .eq("email", body.email)
-        .execute()
-    )
-    if existing.data:
-        raise HTTPException(status_code=400, detail="Email already registered")
+    try:
+        # Check if user exists
+        existing = db.table("users").select("id").eq("email", body.email.lower()).execute()
+        if existing.data:
+            raise HTTPException(status_code=400, detail="User with this email already exists")
 
-    # Create user
-    new_user = db.table("users").insert({
-        "name": body.name.strip(),
-        "email": body.email.lower(),
-        "password_hash": hash_password(body.password),
-    }).execute()
+        # Hash password
+        hashed = hash_password(body.password)
 
-    if not new_user.data:
-        raise HTTPException(status_code=500, detail="Failed to create user")
+        # Insert user
+        res = db.table("users").insert({
+            "name": body.name,
+            "email": body.email.lower(),
+            "password_hash": hashed
+        }).execute()
 
-    user = new_user.data[0]
-    
-    # Create profile for the new user
-    db.table("profiles").insert({
-        "user_id": user["id"],
-        "xp": 0,
-        "onboarded": False
-    }).execute()
+        if not res.data:
+            raise HTTPException(status_code=500, detail="Failed to create user account")
 
-    token = create_token(user["id"])
+        user_id = res.data[0]["id"]
 
-    return TokenResponse(
-        access_token=token,
-        user_id=user["id"],
-        name=user["name"],
-        email=user["email"],
-    )
+        # Create initial profile
+        db.table("profiles").insert({
+            "user_id": user_id,
+            "xp": 0,
+            "onboarded": False
+        }).execute()
+
+        # Generate token
+        token = create_token(user_id)
+        
+        return {
+            "access_token": token,
+            "user_id": user_id,
+            "name": body.name,
+            "email": body.email.lower()
+        }
+    except Exception as e:
+        print(f"Signup error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Database Error: {str(e)}")
 
 
 @router.post("/login", response_model=TokenResponse)
 def login(body: LoginRequest):
     db = get_supabase()
 
-    result = (
-        db.table("users")
-        .select("id, name, email, password_hash")
-        .eq("email", body.email.lower())
-        .execute()
-    )
+    try:
+        result = (
+            db.table("users")
+            .select("id, name, email, password_hash")
+            .eq("email", body.email.lower())
+            .execute()
+        )
 
-    if not result.data:
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+        if not result.data:
+            raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    user = result.data[0]
+        user = result.data[0]
 
-    if not verify_password(body.password, user["password_hash"]):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+        if not verify_password(body.password, user["password_hash"]):
+            raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    token = create_token(user["id"])
+        token = create_token(user["id"])
 
-    return TokenResponse(
-        access_token=token,
-        user_id=user["id"],
-        name=user["name"],
-        email=user["email"],
-    )
+        return {
+            "access_token": token,
+            "user_id": user["id"],
+            "name": user["name"],
+            "email": user["email"]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Login error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Database Error: {str(e)}")
 
 
 @router.get("/me", response_model=UserOut)
 def get_me(user_id: str = Depends(get_current_user)):
     db = get_supabase()
 
-    result = (
-        db.table("users")
-        .select("id, name, email, created_at")
-        .eq("id", user_id)
-        .single()
-        .execute()
-    )
+    try:
+        result = (
+            db.table("users")
+            .select("id, name, email, created_at")
+            .eq("id", user_id)
+            .single()
+            .execute()
+        )
 
-    if not result.data:
-        raise HTTPException(status_code=404, detail="User not found")
+        if not result.data:
+            raise HTTPException(status_code=404, detail="User not found")
 
-    return result.data
+        return result.data
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database Error: {str(e)}")
