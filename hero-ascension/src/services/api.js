@@ -1,4 +1,5 @@
 const API_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:8000' : '')
+console.log('🛡️ Hero Ascension API initialized at:', API_URL || '(relative to origin)')
 
 async function request(endpoint, options = {}) {
   const token = localStorage.getItem('ha_token')
