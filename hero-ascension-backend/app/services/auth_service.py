@@ -5,13 +5,12 @@ JWT creation/verification and password hashing.
 """
 
 import os
+import bcrypt
 from datetime import datetime, timedelta, timezone
-from passlib.context import CryptContext
 from jose import JWTError, jwt
 from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer_scheme = HTTPBearer()
 
 SECRET = os.getenv("JWT_SECRET")
@@ -22,17 +21,22 @@ ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 EXPIRE_MIN = int(os.getenv("JWT_EXPIRE_MINUTES", "10080"))  # 7 days
 
 
-def _safe_password(plain: str) -> str:
-    """Ensure password is within bcrypt 72-byte limit"""
-    return plain.encode("utf-8")[:72].decode("utf-8", "ignore")
+def hash_password(password: str) -> str:
+    """Hash password using bcrypt."""
+    # Bcrypt requires bytes and has a 72-char limit. 
+    # We encode to utf-8 and bcrypt will handle the truncation if needed.
+    pwd_bytes = password.encode('utf-8')
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(pwd_bytes, salt)
+    return hashed.decode('utf-8')
 
 
-def hash_password(plain: str) -> str:
-    return pwd_ctx.hash(_safe_password(plain))
-
-
-def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_ctx.verify(_safe_password(plain), hashed)
+def verify_password(password: str, hashed: str) -> bool:
+    """Verify password against hashed version."""
+    try:
+        return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+    except Exception:
+        return False
 
 
 def create_token(user_id: str) -> str:
