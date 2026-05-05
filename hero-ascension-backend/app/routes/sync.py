@@ -49,13 +49,20 @@ def get_full_state(user_id: str = Depends(get_current_user)):
 @router.post("/profile", response_model=ProfileOut)
 def update_profile(body: ProfileUpdate, user_id: str = Depends(get_current_user)):
     db = get_supabase()
-    update_data = body.dict(exclude_unset=True)
-    update_data["updated_at"] = "now()"
-    
-    result = db.table("profiles").update(update_data).eq("user_id", user_id).execute()
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Profile not found")
-    return result.data[0]
+    try:
+        update_data = body.dict(exclude_unset=True)
+        # 🛡️ Self-Healing: Check if profile exists first
+        check = db.table("profiles").select("user_id").eq("user_id", user_id).execute()
+        if not check.data:
+            # Create it
+            db.table("profiles").insert({"user_id": user_id, "xp": 0, "onboarded": False}).execute()
+        
+        result = db.table("profiles").update(update_data).eq("user_id", user_id).execute()
+        if not result.data:
+            raise HTTPException(status_code=404, detail="Profile not found after creation attempt")
+        return result.data[0]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Sync Profile Error: {str(e)}")
 
 @router.post("/logs/toggle")
 def toggle_habit_log(body: LogToggleRequest, user_id: str = Depends(get_current_user)):
